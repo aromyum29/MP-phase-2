@@ -3,3 +3,26 @@
 @import "tw-animate-css";
 @import "./_theme.css";
 @import "./_globals.css";
+
+/* Iteration 1 Bank account, Merchant credit and Koko assets (UI audit X1, X2).
+   The portal root is 14px, so restore readable caption and body sizes and a
+   darker secondary text colour, scoped to these pages only. */
+.koko-v1 {
+  --muted-foreground: #5f5f70;
+  --text-xs: 12px;
+  --text-xs--line-height: 1.45;
+  --text-sm: 14px;
+  --text-sm--line-height: 1.5;
+}
+.dark .koko-v1 {
+  --muted-foreground: oklch(0.78 0 0);
+}
+/* Iteration 1 toasts: the app-wide green (#00A96E) is 3:1 with white text. */
+[data-sonner-toast].koko-v1-toast {
+  background: #065f46 !important;
+  border-color: #064e3b !important;
+}
+[data-sonner-toast].koko-v1-toast [data-description] {
+  color: #ffffff !important;
+  opacity: 1 !important;
+}

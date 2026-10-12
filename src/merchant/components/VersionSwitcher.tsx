@@ -1,4 +1,4 @@
-import { ChevronUp, Layers, Component } from "lucide-react"
+import { ChevronUp, Layers, Component, FlaskConical } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,10 +10,12 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu"
 import { usePortalIteration } from "./IterationProvider"
+import { useDemo } from "./v1/demo"
 import { cn } from "./ui/utils"
 
 export function VersionSwitcher({ collapsed = false, onOpenComponents }: { collapsed?: boolean; onOpenComponents?: () => void }) {
   const { iteration, setIteration } = usePortalIteration()
+  const { setPanelOpen } = useDemo()
 
   return (
     <DropdownMenu>
@@ -68,6 +70,11 @@ export function VersionSwitcher({ collapsed = false, onOpenComponents }: { colla
             <Component className="h-4 w-4" />Modular components
           </DropdownMenuItem>
         </>}
+        {iteration === "1" && (
+          <DropdownMenuItem onSelect={() => setPanelOpen(true)} className="min-h-11 cursor-pointer gap-2 rounded-lg">
+            <FlaskConical className="h-4 w-4" />Demo panel
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )

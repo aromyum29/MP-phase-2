@@ -33,6 +33,7 @@ import { Analytics } from "./Analytics"
 import { Campaign } from "./Campaign"
 import { Finance } from "./Finance"
 import { BankAccount } from "./BankAccount"
+import { BankAccountV1 } from "./v1/BankAccountV1"
 import { ModularComponents } from "./ModularComponents"
 import { FeatureAnnouncement, defaultAnnouncement, type AnnouncementContent, type AnnouncementDestination } from "./FeatureAnnouncement"
 import { FinanceWorkspace, type FinanceSection } from "./FinanceWorkspace"
@@ -823,7 +824,7 @@ export function MerchantPortal({ children, onLogout }: MerchantPortalProps) {
             ) : currentPage === 'financial-statement' && iteration === '1' ? (
               <Finance page />
             ) : currentPage === 'bank-account' && iteration === '1' ? (
-              <BankAccount page />
+              <BankAccountV1 />
             ) : currentPage === 'finance' ? (
               <FinanceWorkspace section={financeSection} onSectionChange={setFinanceSection} />
             ) : currentPage === 'merchant-loans' ? (

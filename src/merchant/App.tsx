@@ -3,6 +3,8 @@ import { useEffect } from "react"
 import { ThemeProvider } from "./components/ThemeProvider"
 import { FinanceDataProvider } from "./components/FinanceData"
 import { IterationProvider } from "./components/IterationProvider"
+import { DemoProvider } from "./components/v1/demo"
+import { DemoPanel } from "./components/v1/DemoPanel"
 import { MerchantPortal } from "./components/MerchantPortal"
 import { Toaster } from "./components/ui/sonner"
 import { toast } from "sonner"
@@ -53,9 +55,11 @@ export default function App() {
   return (
     <IterationProvider>
     <FinanceDataProvider>
+    <DemoProvider>
     <ThemeProvider>
       <div className="h-screen w-screen overflow-x-hidden">
         <MerchantPortal />
+        <DemoPanel />
         <Toaster
           position="bottom-right"
           toastOptions={{
@@ -72,6 +76,7 @@ export default function App() {
         />
       </div>
     </ThemeProvider>
+    </DemoProvider>
     </FinanceDataProvider>
     </IterationProvider>
   )

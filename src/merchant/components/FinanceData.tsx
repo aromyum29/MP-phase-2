@@ -13,14 +13,22 @@ export type LoanForm = {
   revenue: string;
   borrowing: string;
   repayments: string;
+  // Iteration 1 only: free-text purpose when "Other" is chosen.
+  purposeOther?: string;
 };
 export type LoanStatus = "Pending" | "Accepted" | "Rejected";
+// Optional fields below are written by iteration 1 only; iteration 2 ignores them.
 export type LoanRequest = {
   id: string;
   bankId: string;
   date: string;
   status: LoanStatus;
   form: LoanForm;
+  requestedBy?: string;
+  decidedAt?: string;
+  reason?: string;
+  offer?: { amount: string; term: string; rate: string };
+  consent?: { crib: boolean; authorised: boolean; at: string; by: string };
 };
 export type BankRequest = {
   id: string;
@@ -28,7 +36,16 @@ export type BankRequest = {
   status: "Pending" | "Accepted" | "Rejected";
   account: Account;
   filename: string;
+  requestedBy?: string;
+  decidedAt?: string;
+  reason?: string;
+  from?: Account;
+  verifiedAt?: string;
 };
+// Iteration 1 moves cancelled requests here so iteration 2's lists and
+// one-active-request rules never see a status they don't know.
+export type CancelledBankRequest = Omit<BankRequest, "status"> & { status: "Cancelled"; cancelledAt: string };
+export type CancelledLoanRequest = Omit<LoanRequest, "status"> & { status: "Cancelled"; cancelledAt: string };
 export const initialAccount: Account = {
   holder: "Carnage Retail (Pvt) Ltd",
   bank: "Commercial Bank",
@@ -71,11 +88,16 @@ export const dateLabel = (value: string) =>
 export const reference = (prefix: string) =>
   `${prefix}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
 
-type Data = {
+export type Data = {
   account: Account;
   bankRequests: BankRequest[];
   loans: LoanRequest[];
   loanDrafts: Record<string, LoanForm>;
+  // Iteration 1 only.
+  accountActiveFrom?: string;
+  notifyBanks?: string[];
+  cancelledBankRequests?: CancelledBankRequest[];
+  cancelledLoans?: CancelledLoanRequest[];
 };
 const initial: Data = { account: initialAccount, bankRequests: [], loans: [], loanDrafts: {} };
 const FinanceContext = createContext<{
