@@ -36,7 +36,7 @@ import { BankAccount } from "./BankAccount"
 import { BankAccountV1 } from "./v1/BankAccountV1"
 import { useSearchValue, useSetSearch, VIEW_KEYS } from "./v1/url"
 import { ModularComponents } from "./ModularComponents"
-import { FeatureAnnouncement, defaultAnnouncement, type AnnouncementContent, type AnnouncementDestination } from "./FeatureAnnouncement"
+import { FeatureAnnouncement, defaultAnnouncement, type AnnouncementContent } from "./FeatureAnnouncement"
 import { FinanceWorkspace, type FinanceSection } from "./FinanceWorkspace"
 import { MerchantLoans } from "./MerchantLoans"
 import { MerchantCreditV1 } from "./v1/MerchantCreditV1"
@@ -385,18 +385,13 @@ export function MerchantPortal({ children, onLogout }: MerchantPortalProps) {
     setCurrentPage('create-order')
     setCreateOrderStep('form')
   }
-  const exploreAnnouncementFeature = (destination: AnnouncementDestination) => {
-    setAnnouncement(null)
-    setCurrentPage(destination)
-    setOpenGroup(destination === 'koko-assets' ? 'growth' : 'finance')
-  }
 
   // Determine if special background should be applied
   const shouldApplySpecialBackground = currentPage === 'create-order' && createOrderStep === 'form'
 
   return (
     <div data-portal-iteration={iteration} className="flex h-screen bg-background overflow-x-hidden">
-      {iteration === '1' && <FeatureAnnouncement open={!!announcement} onContinue={continueToCreateOrder} content={announcement ?? defaultAnnouncement} onExplore={exploreAnnouncementFeature} anchorRef={createOrderCardRef} />}
+      {iteration === '1' && <FeatureAnnouncement open={!!announcement} onContinue={continueToCreateOrder} content={announcement ?? defaultAnnouncement} />}
       {/* Desktop Sidebar */}
       <div
         className={cn(
@@ -851,7 +846,7 @@ export function MerchantPortal({ children, onLogout }: MerchantPortalProps) {
             ) : currentPage === 'plugins' ? (
               <Plugin />
             ) : currentPage === 'modular-components' && iteration === '1' ? (
-              <ModularComponents onSimulateEntry={(content) => { setCurrentPage('create-order'); setCreateOrderStep('form'); setAnnouncement(content) }} onExplore={exploreAnnouncementFeature} onContinue={continueToCreateOrder} />
+              <ModularComponents onSimulateEntry={(content) => setAnnouncement(content)} onContinue={continueToCreateOrder} />
             ) : currentPage === 'financial-statement' && iteration === '1' ? (
               <Finance page />
             ) : currentPage === 'bank-account' && iteration === '1' ? (

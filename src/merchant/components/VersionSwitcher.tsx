@@ -15,6 +15,7 @@ import { cn } from "./ui/utils"
 
 export function VersionSwitcher({ collapsed = false, onOpenComponents }: { collapsed?: boolean; onOpenComponents?: () => void }) {
   const { iteration, setIteration } = usePortalIteration()
+  const uiName = iteration === "1" ? "Main UI" : "Alternate UI"
   const { setPanelOpen } = useDemo()
 
   return (
@@ -22,8 +23,8 @@ export function VersionSwitcher({ collapsed = false, onOpenComponents }: { colla
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          aria-label={`Version switcher, Iteration ${iteration}`}
-          title={collapsed ? `Version switcher · Iteration ${iteration}` : undefined}
+          aria-label={`Version switcher, ${uiName}`}
+          title={collapsed ? `Version switcher · ${uiName}` : undefined}
           className={cn(
             "flex w-full items-center rounded-xl border border-border bg-background text-foreground shadow-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
             collapsed ? "min-h-11 flex-col justify-center gap-1 py-2" : "gap-3 px-3 py-3 text-left",
@@ -31,12 +32,12 @@ export function VersionSwitcher({ collapsed = false, onOpenComponents }: { colla
         >
           <Layers className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           {collapsed ? (
-            <span className="text-xs font-semibold">{iteration}</span>
+            <span className="text-xs font-semibold">{iteration === "1" ? "M" : "A"}</span>
           ) : (
             <>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium">Version switcher</span>
-                <span className="mt-1 block text-xs text-muted-foreground">Iteration {iteration}</span>
+                <span className="mt-1 block text-xs text-muted-foreground">{uiName}</span>
               </span>
               <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
             </>
@@ -58,10 +59,10 @@ export function VersionSwitcher({ collapsed = false, onOpenComponents }: { colla
           }}
         >
           <DropdownMenuRadioItem value="1" className="min-h-11 cursor-pointer rounded-lg">
-            Iteration 1
+            Main UI
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="2" className="min-h-11 cursor-pointer rounded-lg">
-            Iteration 2
+            Alternate UI
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
         {iteration === "1" && onOpenComponents && <>

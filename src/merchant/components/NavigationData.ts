@@ -13,7 +13,8 @@ import {
   ClockIcon,
   UserGroupIcon,
   PhotoIcon,
-  PuzzlePieceIcon
+  PuzzlePieceIcon,
+  SparklesIcon
 } from "@heroicons/react/24/outline"
 
 export interface NavigationItem {
@@ -106,7 +107,7 @@ export const navigationItems: NavigationItem[] = [
 export const navigationGroups = [
   { id: 'primary', title: '', label: 'Main navigation', items: ['create-order', 'orders', 'analytics', 'static-qr'] },
   { id: 'finance', icon: WalletIcon, title: 'Finance', label: 'Finance', items: ['financial-statement', 'bank-account', 'merchant-loans'] },
-  { id: 'growth', icon: ChartBarIcon, title: 'Growth', label: 'Growth', items: ['campaign', 'koko-assets'] },
+  { id: 'marketing', icon: SparklesIcon, title: 'Marketing', label: 'Marketing', items: ['campaign', 'koko-assets'] },
   { id: 'developers', icon: CodeBracketIcon, title: 'Developers', label: 'Developers', items: ['plugins'] },
   { id: 'administration', icon: Cog6ToothIcon, title: 'Administration', label: 'Administration', items: ['profile-management', 'action-history'] },
 ]

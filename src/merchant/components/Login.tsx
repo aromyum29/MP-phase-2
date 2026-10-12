@@ -21,7 +21,9 @@ function Container2() {
   return <div className="h-[952.668px] w-[1580.819px]" data-name="Container" style={{ backgroundImage: "url('data:image/svg+xml;utf8,<svg viewBox=\\\'0 0 1580.8 952.67\\\' xmlns=\\\'http://www.w3.org/2000/svg\\\' preserveAspectRatio=\\\'none\\\'><rect x=\\\'0\\\' y=\\\'0\\\' height=\\\'100%\\\' width=\\\'100%\\\' fill=\\\'url(%23grad)\\\' opacity=\\\'1\\\'/><defs><radialGradient id=\\\'grad\\\' gradientUnits=\\\'userSpaceOnUse\\\' cx=\\\'0\\\' cy=\\\'0\\\' r=\\\'10\\\' gradientTransform=\\\'matrix(0 -35 -70 0 316.16 762.13)\\\'><stop stop-color=\\\'rgba(150,250,200,0.2)\\\' offset=\\\'0\\\'/><stop stop-color=\\\'rgba(75,125,100,0.1)\\\' offset=\\\'0.35\\\'/><stop stop-color=\\\'rgba(0,0,0,0)\\\' offset=\\\'0.7\\\'/></radialGradient></defs></svg>')" }} />;
 }
 
-function Container3() {
+// The soft colour washes behind the login card, shared with the post-login
+// feature announcement.
+export function Container3() {
   return (
     <div className="absolute h-full w-full left-0 opacity-60 top-0 overflow-hidden pointer-events-none" data-name="Container">
       <div className="absolute flex h-[959.342px] items-center justify-center left-[-13.96px] top-[-32.82px] w-[1585.169px]" style={{ "--transform-inner-width": "0", "--transform-inner-height": "0" } as React.CSSProperties}>
