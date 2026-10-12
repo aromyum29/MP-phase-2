@@ -38,6 +38,7 @@ import { ModularComponents } from "./ModularComponents"
 import { FeatureAnnouncement, defaultAnnouncement, type AnnouncementContent, type AnnouncementDestination } from "./FeatureAnnouncement"
 import { FinanceWorkspace, type FinanceSection } from "./FinanceWorkspace"
 import { MerchantLoans } from "./MerchantLoans"
+import { MerchantCreditV1 } from "./v1/MerchantCreditV1"
 import { ActionHistory } from "./ActionHistory"
 import { ProfileManagement } from "./ProfileManagement"
 import { KokoAssets } from "./tools/KokoAssets"
@@ -828,7 +829,7 @@ export function MerchantPortal({ children, onLogout }: MerchantPortalProps) {
             ) : currentPage === 'finance' ? (
               <FinanceWorkspace section={financeSection} onSectionChange={setFinanceSection} />
             ) : currentPage === 'merchant-loans' ? (
-              <MerchantLoans page />
+              iteration === '1' ? <MerchantCreditV1 /> : <MerchantLoans page />
             ) : currentPage === 'action-history' ? (
               <ActionHistory />
             ) : currentPage === 'profile-management' ? (

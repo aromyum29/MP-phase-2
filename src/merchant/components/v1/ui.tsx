@@ -25,7 +25,6 @@ import { cn } from "../ui/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../ui/command";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../ui/sheet";
-import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 
 // Shared building blocks for the iteration 1 Bank account, Merchant credit and
 // Koko assets pages. Sizes are in px because the portal's root font is 14px,
@@ -329,23 +328,47 @@ export function UnderlineTabs({
   items: Array<{ value: string; label: string; count?: number }>;
   label: string;
 }) {
+  const refs = useRef<Array<HTMLButtonElement | null>>([]);
+  const move = (to: number) => {
+    const index = (to + items.length) % items.length;
+    onChange(items[index].value);
+    refs.current[index]?.focus();
+  };
   return (
-    <Tabs value={value} onValueChange={onChange}>
-      <TabsList aria-label={label} className="h-auto w-full justify-start gap-6 rounded-none border-b border-border bg-transparent p-0">
-        {items.map((item) => (
-          <TabsTrigger
+    <div role="tablist" aria-label={label} className="flex w-full gap-6 border-b border-border">
+      {items.map((item, index) => {
+        const active = item.value === value;
+        return (
+          <button
             key={item.value}
-            value={item.value}
-            className="min-h-[44px] flex-none rounded-none border-0 border-b-2 border-transparent bg-transparent px-0 pb-2.5 pt-1 text-[15px] data-[state=active]:border-gray-900 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            ref={(element) => {
+              refs.current[index] = element;
+            }}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            tabIndex={active ? 0 : -1}
+            onClick={() => onChange(item.value)}
+            onKeyDown={(event) => {
+              const keys: Record<string, number> = { ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: items.length - 1 };
+              if (event.key in keys) {
+                event.preventDefault();
+                move(keys[event.key]);
+              }
+            }}
+            className={cn(
+              "-mb-px inline-flex min-h-[44px] items-center gap-2 rounded-t-sm border-b-2 pb-2 pt-1 text-[15px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900",
+              active ? "border-gray-900 text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
           >
             {item.label}
             {item.count !== undefined && (
               <span className="rounded-full bg-[#ececf0] px-2 py-0.5 text-xs tabular-nums text-foreground">{item.count}</span>
             )}
-          </TabsTrigger>
-        ))}
-      </TabsList>
-    </Tabs>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -873,7 +896,7 @@ export function Drawer({
             </Btn>
           </SheetClose>
         </SheetHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">{children}</div>
+        <div role="region" aria-label="Details" tabIndex={0} className="min-h-0 flex-1 overflow-y-auto px-5 py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900 sm:px-6">{children}</div>
         {footer && <div className="border-t border-border px-5 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6">{footer}</div>}
       </SheetContent>
     </Sheet>

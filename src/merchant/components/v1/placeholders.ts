@@ -124,3 +124,8 @@ export const CREDIT_DECLINE_REASONS = [
   "Existing repayments are too high for the amount requested.",
   "The business registration couldn't be verified.",
 ];
+
+// Where an accepted request continues. Replace with the bank's application link.
+export const LENDER_LINKS: Record<string, { apply: string; label: string }> = {
+  sampath: { apply: "https://www.sampath.lk/", label: "Sampath Bank's website" },
+};
