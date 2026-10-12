@@ -49,6 +49,8 @@ export const fileSize = (bytes: number) =>
 
 export const notify = (title: string, description?: string) =>
   toast.success(title, { description, className: "koko-v1-toast" });
+export const notifyError = (title: string, description?: string) =>
+  toast.error(title, { description, className: "koko-v1-toast koko-v1-toast-error" });
 
 /* ---------- Page structure ---------- */
 

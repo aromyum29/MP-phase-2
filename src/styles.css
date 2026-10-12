@@ -24,6 +24,11 @@
     border-color: #064e3b !important;
     box-shadow: 0 4px 12px rgba(6, 95, 70, 0.3) !important;
   }
+  [data-sonner-toast].koko-v1-toast-error {
+    background: #9f1d2a !important;
+    border-color: #7f1722 !important;
+    box-shadow: 0 4px 12px rgba(159, 29, 42, 0.3) !important;
+  }
   [data-sonner-toast].koko-v1-toast [data-description] {
     color: #ffffff !important;
     opacity: 1 !important;

@@ -42,6 +42,7 @@ import { MerchantCreditV1 } from "./v1/MerchantCreditV1"
 import { ActionHistory } from "./ActionHistory"
 import { ProfileManagement } from "./ProfileManagement"
 import { KokoAssets } from "./tools/KokoAssets"
+import { KokoAssetsV1 } from "./v1/KokoAssetsV1"
 import { Plugin } from "./tools/Plugin"
 
 interface MerchantPortalProps {
@@ -815,7 +816,7 @@ export function MerchantPortal({ children, onLogout }: MerchantPortalProps) {
             ) : currentPage === 'analytics' ? (
               <Analytics />
             ) : currentPage === 'koko-assets' ? (
-              <KokoAssets />
+              iteration === '1' ? <KokoAssetsV1 /> : <KokoAssets />
             ) : currentPage === 'campaign' || currentPage === 'campaign-active' || currentPage === 'campaign-yours' ? (
               <Campaign showNotification={!campaignNotificationViewed} />
             ) : currentPage === 'plugins' ? (
