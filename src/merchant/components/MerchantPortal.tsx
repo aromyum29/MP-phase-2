@@ -34,6 +34,7 @@ import { Campaign } from "./Campaign"
 import { Finance } from "./Finance"
 import { BankAccount } from "./BankAccount"
 import { BankAccountV1 } from "./v1/BankAccountV1"
+import { useSearchValue, useSetSearch, VIEW_KEYS } from "./v1/url"
 import { ModularComponents } from "./ModularComponents"
 import { FeatureAnnouncement, defaultAnnouncement, type AnnouncementContent, type AnnouncementDestination } from "./FeatureAnnouncement"
 import { FinanceWorkspace, type FinanceSection } from "./FinanceWorkspace"
@@ -183,13 +184,17 @@ const getPageDescription = (pageId: string) => {
 
 export function MerchantPortal({ children, onLogout }: MerchantPortalProps) {
   const { iteration } = usePortalIteration()
-  const [currentPage, setCurrentPage] = useState('create-order')
+  // Iteration 1 keeps the current page in the address bar (UI audit X7).
+  const urlPage = useSearchValue('page')
+  const setSearch = useSetSearch()
+  const groupFor = (page: string) => navigationGroups.find(group => group.title && group.items.includes(page))?.id ?? null
+  const [currentPage, setCurrentPage] = useState(() => (iteration === '1' && urlPage ? urlPage : 'create-order'))
   const [financeSection, setFinanceSection] = useState<FinanceSection>('statement')
   const previousIteration = useRef(iteration)
   const navigationItems: NavigationItem[] = iteration === '1'
     ? [...baseNavigationItems.filter(item => item.id !== 'finance'), ...financeNavigationItems]
     : baseNavigationItems
-  const [openGroup, setOpenGroup] = useState<string | null>(null)
+  const [openGroup, setOpenGroup] = useState<string | null>(() => (iteration === '1' && urlPage ? groupFor(urlPage) : null))
   const createOrderCardRef = useRef<HTMLDivElement>(null)
   const [announcement, setAnnouncement] = useState<AnnouncementContent | null>(null)
   const toggleGroup = (id: string) => {
@@ -225,6 +230,30 @@ export function MerchantPortal({ children, onLogout }: MerchantPortalProps) {
       previousIteration.current = iteration
     }
   }, [iteration, currentPage, financeSection])
+  const lastUrlPage = useRef(urlPage)
+  useEffect(() => {
+    if (iteration !== '1' || urlPage === lastUrlPage.current) return
+    lastUrlPage.current = urlPage
+    const page = urlPage ?? 'create-order'
+    if (page !== currentPage) {
+      setCurrentPage(page)
+      setCreateOrderStep('form')
+      const group = groupFor(page)
+      if (group) setOpenGroup(group)
+    }
+  }, [urlPage, iteration])
+  useEffect(() => {
+    const clear = Object.fromEntries(VIEW_KEYS.map(key => [key, null]))
+    if (iteration !== '1') {
+      if (urlPage) setSearch({ page: null, ...clear }, { replace: true })
+      return
+    }
+    const page = currentPage === 'create-order' ? null : currentPage
+    if (page !== urlPage) {
+      lastUrlPage.current = page
+      setSearch({ page, ...clear })
+    }
+  }, [currentPage, iteration])
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)

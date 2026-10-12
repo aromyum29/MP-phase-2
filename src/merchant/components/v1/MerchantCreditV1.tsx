@@ -78,7 +78,9 @@ export function MerchantCreditV1() {
   const [tab, setTab] = useViewParam<"banks" | "requests">("tab", "banks");
   const [filter, setFilter] = useViewParam<string>("status", "all");
   const [applying, setApplying] = useOptionalParam("apply");
-  const [step, setStep] = useState(0);
+  const [stepParam, setStepParam] = useViewParam<string>("step", "1");
+  const step = Math.min(Math.max((Number(stepParam) || 1) - 1, 0), STEPS.length - 1);
+  const setStep = (index: number) => setStepParam(String(index + 1));
   const [openId, setOpenId] = useOptionalParam("request");
   const [receipt, setReceipt] = useState<string | null>(null);
   const [discarding, setDiscarding] = useState<string | null>(null);
@@ -92,6 +94,14 @@ export function MerchantCreditV1() {
   const activeFor = (bankId: string) => data.loans.find((request) => request.bankId === bankId && request.status !== "Rejected");
   const drafts = Object.entries(data.loanDrafts).filter(([id]) => lenders.some((lender) => lender.id === id) && !activeFor(id));
   const detail = requests.find((request) => request.id === openId);
+  // A request that's already open can't be edited, e.g. after Back from the confirmation.
+  useEffect(() => {
+    if (applying && (activeFor(applying) || !canManage)) {
+      setApplying(null, { replace: true });
+      setStepParam("1", { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applying, canManage, data.loans]);
 
   const discardDraft = (bankId: string) => {
     setData((previous) => {
@@ -155,11 +165,13 @@ export function MerchantCreditV1() {
         eligibility={eligibility}
         onExit={(saved) => {
           setApplying(null);
+          setStepParam("1");
           setTab(saved ? "requests" : "banks");
           if (saved) notify("Draft saved", "Continue any time from Merchant credit.");
         }}
         onSubmitted={(id) => {
-          setApplying(null);
+          setApplying(null, { replace: true });
+          setStepParam("1", { replace: true });
           setReceipt(id);
         }}
       />
@@ -825,6 +837,16 @@ function Application({
     }
     return next;
   };
+  useEffect(() => {
+    for (let index = 0; index < step; index += 1) {
+      if (Object.keys(errorsFor(index)).length) {
+        setAttempts((previous) => ({ ...previous, [index]: 1 }));
+        setStep(index);
+        return;
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
   const errors = errorsFor(step);
   const shown = (key: string) => (attempts[step] || touched[key] ? errors[key] : undefined);
   const touch = (key: string) => setTouched((previous) => ({ ...previous, [key]: true }));

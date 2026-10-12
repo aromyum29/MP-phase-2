@@ -36,7 +36,12 @@ function useDownload() {
 export function KokoAssetsV1() {
   const loading = useFirstLoad("koko-assets");
   const [category, setCategory] = useViewParam<string>("category", "All");
-  const [query, setQuery] = useViewParam<string>("q", "");
+  const [queryParam, setQueryParam] = useViewParam<string>("q", "", { replace: true });
+  const [query, setQueryState] = useState(queryParam);
+  const setQuery = (value: string) => {
+    setQueryState(value);
+    setQueryParam(value.trim());
+  };
   const [previewId, setPreviewId] = useOptionalParam("asset");
   const [guideOpen, setGuideOpen] = useState(false);
   const download = useDownload();

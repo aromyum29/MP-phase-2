@@ -119,6 +119,23 @@ export function BankAccountV1() {
     return () => clearTimeout(timer);
   }, [view, resendIn]);
 
+  // After a reload or Back, the statement (kept in memory) and the confirm
+  // field are gone, and a submitted change can't be edited, so steer to a
+  // view that still makes sense.
+  useEffect(() => {
+    if (view === "overview") return;
+    if (view === "done") {
+      if (!receipt) setView("overview", { replace: true });
+      return;
+    }
+    if (pending || !canManage) setView("overview", { replace: true });
+    else if (view !== "details" && Object.keys(errors).length) {
+      setAttempt(1);
+      setView("details", { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, pending, canManage]);
+
   const startChange = () => {
     setAttempt(0);
     setTouched({});
