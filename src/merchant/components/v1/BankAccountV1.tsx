@@ -156,7 +156,6 @@ export function BankAccountV1() {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [attempt, setAttempt] = useState(0);
   const [fileError, setFileError] = useState<string>();
-  const [showHelp, setShowHelp] = useState(false);
   const [attest, setAttest] = useState(false);
   const [attestAttempt, setAttestAttempt] = useState(0);
   const bankEntry = BANKS.find((bank) => bank.name === bankDraft.bank);
@@ -587,51 +586,26 @@ export function BankAccountV1() {
               />
             </div>
             <div className="grid gap-7 sm:grid-cols-2 sm:gap-5">
-              <div className="space-y-3">
-                <TextInput
-                  id="ba-number"
-                  label="Account number"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  placeholder="Enter account number"
-                  value={group(digits)}
-                  onChange={(event) =>
-                    update("number", event.target.value.replace(/\D/g, "").slice(0, 18))
-                  }
-                  onBlur={() => touch("ba-number")}
-                  error={shown("ba-number")}
-                  aside={
-                    bankEntry && (
-                      <span
-                        className="text-xs tabular-nums text-muted-foreground"
-                        aria-hidden="true"
-                      >
-                        {digits.length}/
-                        {bankEntry.accountDigits[bankEntry.accountDigits.length - 1]}
-                      </span>
-                    )
-                  }
-                  hint={
-                    <>
-                      Spaces are added for you.{" "}
-                      <button
-                        type="button"
-                        className="font-medium text-gray-900 underline underline-offset-2"
-                        aria-expanded={showHelp}
-                        onClick={() => setShowHelp((value) => !value)}
-                      >
-                        Where do I find this?
-                      </button>
-                    </>
-                  }
-                />
-                {showHelp && (
-                  <InlineAlert tone="neutral" title="Finding your account number">
-                    It's printed at the top of your bank statement, next to the account name. In a
-                    passbook, it's on the first page. Don't use a card number or the branch code.
-                  </InlineAlert>
-                )}
-              </div>
+              <TextInput
+                id="ba-number"
+                label="Account number"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="Enter account number"
+                value={group(digits)}
+                onChange={(event) =>
+                  update("number", event.target.value.replace(/\D/g, "").slice(0, 18))
+                }
+                onBlur={() => touch("ba-number")}
+                error={shown("ba-number")}
+                aside={
+                  bankEntry && (
+                    <span className="text-xs tabular-nums text-muted-foreground" aria-hidden="true">
+                      {digits.length}/{bankEntry.accountDigits[bankEntry.accountDigits.length - 1]}
+                    </span>
+                  )
+                }
+              />
               <TextInput
                 id="ba-confirm"
                 label="Re-enter account number"
@@ -644,7 +618,6 @@ export function BankAccountV1() {
                 }
                 onBlur={() => touch("ba-confirm")}
                 error={shown("ba-confirm")}
-                hint="Type it again so we can catch any typos."
               />
             </div>
             <FileDrop
