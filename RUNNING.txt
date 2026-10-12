@@ -1,0 +1,57 @@
+Koko Merchant Portal
+
+Run from this directory:
+  bun install --frozen-lockfile
+  bun run dev --host 127.0.0.1 --port 5173
+
+Preview: http://127.0.0.1:5173
+The prototype opens directly inside the merchant portal; no login is needed.
+Build: bun run build
+
+Version switcher is at the bottom of the sidebar.
+Iteration 1: Finance is an expandable sidebar category containing Financial
+statement, Bank account and Merchant credit as direct destinations. Categories
+start closed; opening one selects its first item. Static QR is in the primary nav.
+Iteration 2: All three are segments inside Finance.
+Iteration 1 Finance actions use the navy primary style from login. Credit
+applications are called merchant credit requests throughout iteration 1.
+
+Bank account:
+- Fictional Sri Lankan current account.
+- Change request with required bank statement (PDF/JPG/PNG, up to 5 MB).
+- Review, confirmation, and request history.
+- Current account stays active while review is pending.
+- One pending change at a time.
+
+Merchant credit:
+- Iteration 1 has Banks / Request history segmented tabs. History contains
+  All / Pending / Accepted / Rejected filters and saved drafts.
+- Six bank cards: Sampath is available; five future examples are disabled.
+- Sampath Bank is the first lender in an extensible lender list.
+- Four-step application with conditional borrowing fields and saved drafts.
+- Request history, Pending/Accepted/Rejected, and demo next-step destination.
+- One active (Pending or Accepted) request per bank.
+
+To try bank responses, open a submitted request and expand
+"Preview a bank response" (merchant credit) or "Preview a review response" (account).
+These controls simulate responses locally; they do not contact a bank.
+
+Request data and drafts are shared across iterations for comparison and saved
+in session storage for this browser tab. The chosen iteration is saved in local
+storage. Files stay in memory and must be reattached after a reload; submitted
+requests retain only the attachment filename. No real files, applications,
+payments, or review decisions are sent to a backend.
+
+The original production target is Cloudflare; build output is in .output/.
+No deployment was performed.
+
+Koko assets: searchable library with six original Koko files, previews, category
+filters, and a downloadable four-file starter kit. Available in both iterations.
+
+Read LLM_CONTEXT.md for the complete reproduction and handoff guide.
+
+Iteration 1: open Version switcher > Modular components to edit and preview
+the Multiple updates or Single update announcement templates. Preview over
+Create Order places the chosen template exactly over the order card. Multiple
+updates have individual Explore links, plus Create new order and Dismiss
+actions that both return to Create Order.

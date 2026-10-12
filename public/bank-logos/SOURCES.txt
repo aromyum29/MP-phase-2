@@ -1,0 +1,38 @@
+Iteration 1: user-supplied Figma Bank Logos component set, downloaded unchanged on 2026-10-12.
+Source: https://www.figma.com/design/jJ0oWKtzdTnwJN5Cg01xjT/Bank-Logos?node-id=1-11
+
+Commercial Bank — variant 1:16, image layer 1:17
+Local: commercial-bank-figma.jpg (2048 x 2048 JPEG; Figma asset URL used a .png suffix)
+Sampath Bank — variant 1:20, image layer 1:21
+Local: sampath-bank-figma.png (512 x 512 PNG)
+Hatton National Bank — variant 1:22, image layer 1:23
+Local: hnb-figma.png (298 x 145 PNG)
+Bank of Ceylon — variant 1:12, image layer 1:13
+Local: bank-of-ceylon-figma.svg (32 x 20 SVG)
+
+Nations Trust Bank — variant 1:18, image layer 1:19
+Local: nations-trust-figma.png (1014 x 1004 PNG)
+Preserves the source 38px rounded clipping window and 40 x 39.61px image placement.
+DFCC Bank — variant 2:93, image layer 2:89
+Local: dfcc-figma.jpg (900 x 900 JPEG; Figma asset URL used a .png suffix)
+Preserves the 38px image at x=0, y=1 inside the component content box.
+
+BankLogo.tsx preserves the Figma component's 40 x 40 frame, 6px corner radius,
+image placement, and backgrounds, including the Bank of Ceylon yellow.
+These are local copies of exact exported image assets, not screenshot crops.
+
+Iteration 2: original bank website logos retained as the comparison baseline.
+
+Official bank logos downloaded on 2026-10-12, unchanged.
+
+Commercial Bank of Ceylon
+Homepage: https://www.combank.lk/
+Asset: https://www.combank.lk/assets/images/logo/commercial_bank_logo.svg
+Local: commercial-bank.svg
+
+Sampath Bank
+Homepage: https://www.sampath.lk/
+Asset: https://www.sampath.lk/_nuxt/img/logo.8fae88f.jpg
+Local: sampath-bank.jpg
+
+These logos identify the banks within the prototype. Trademarks remain with their respective owners. They are not included in the merchant marketing download kit.

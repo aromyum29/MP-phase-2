@@ -1,0 +1,77 @@
+{
+  "assets": [
+    {
+      "id": "logo",
+      "title": "Koko logo",
+      "category": "Logos",
+      "url": "/koko-assets/koko-logo.png",
+      "filename": "koko-logo.png",
+      "width": 2000,
+      "height": 1000,
+      "bytes": 159567,
+      "format": "PNG",
+      "description": "Add the Koko logo to your website and marketing layouts."
+    },
+    {
+      "id": "social",
+      "title": "Koko\u2019s Picks",
+      "category": "Social media",
+      "url": "/koko-assets/koko-picks-square.png",
+      "filename": "koko-picks-square.png",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 270604,
+      "format": "PNG",
+      "description": "Square artwork for your social media posts."
+    },
+    {
+      "id": "mascot",
+      "title": "Koko astronaut",
+      "category": "Illustrations",
+      "url": "/koko-assets/koko-astronaut.png",
+      "filename": "koko-astronaut.png",
+      "width": 1080,
+      "height": 1080,
+      "bytes": 124715,
+      "format": "PNG",
+      "description": "Bring the Koko character into your marketing layouts."
+    },
+    {
+      "id": "pattern",
+      "title": "Koko retail illustration",
+      "category": "Illustrations",
+      "url": "/koko-assets/koko-retail-illustration.png",
+      "filename": "koko-retail-illustration.png",
+      "width": 2000,
+      "height": 2000,
+      "bytes": 1530626,
+      "format": "PNG",
+      "description": "A detailed retail illustration for digital creative."
+    },
+    {
+      "id": "shopping",
+      "title": "Shopping with Koko",
+      "category": "Social media",
+      "url": "/koko-assets/shopping-with-koko.png",
+      "filename": "shopping-with-koko.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 2309295,
+      "format": "PNG",
+      "description": "Landscape artwork for digital marketing. The illustrated QR is decorative."
+    },
+    {
+      "id": "avurudu",
+      "title": "Avurudu campaign sample",
+      "category": "Campaigns",
+      "url": "/koko-assets/koko-avurudu-sample.jpg",
+      "filename": "koko-avurudu-sample.jpg",
+      "width": 2000,
+      "height": 972,
+      "bytes": 419292,
+      "format": "JPG",
+      "description": "Campaign sample with specific dates and offers. Confirm the campaign details before publishing."
+    }
+  ],
+  "kitBytes": 2050255
+}
