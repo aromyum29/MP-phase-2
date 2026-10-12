@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowRight, CheckCircle2, Lock } from "lucide-react";
+import { ArrowDown, ArrowRight, CheckCircle2, ChevronRight, Lock } from "lucide-react";
 import { BankLogo } from "../BankLogo";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "../ui/input-otp";
 import {
@@ -32,8 +32,10 @@ import {
   FileDrop,
   InlineAlert,
   PageHeader,
+  PillAction,
   SkeletonBlock,
   StatusBadge,
+  StatusBar,
   StepIndicator,
   StickyActions,
   TextInput,
@@ -48,7 +50,7 @@ import {
   notify,
   type TimelineItem,
 } from "./ui";
-import { useOptionalParam, useViewParam } from "./url";
+import { VIEW_KEYS, useOptionalParam, useSetSearch, useViewParam } from "./url";
 
 type View = "overview" | "details" | "review" | "verify" | "done";
 type AnyRequest = BankRequest | CancelledBankRequest;
@@ -63,7 +65,7 @@ const nextPayout = () => {
   const days = (NEXT_PAYOUT.weekday - date.getDay() + 7) % 7 || 7;
   date.setDate(date.getDate() + days);
   return date.toLocaleDateString("en-GB", {
-    weekday: "long",
+    weekday: "short",
     day: "numeric",
     month: "short",
     timeZone: "Asia/Colombo",
@@ -76,6 +78,7 @@ export function BankAccountV1() {
   const loading = useFirstLoad("bank-account");
   const [view, setView] = useViewParam<View>("change", "overview");
   const [openId, setOpenId] = useOptionalParam("request");
+  const setSearch = useSetSearch();
   const [receipt, setReceipt] = useState<string | null>(null);
   const submitted = useRef(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -261,22 +264,25 @@ export function BankAccountV1() {
     return (
       <V1Page>
         <PageHeader title="Bank account" description="Where your Koko payouts are sent." />
-        <Card
-          className="max-w-[760px] space-y-5"
+        <div
+          className="max-w-[920px] space-y-4 rounded-[20px] border border-border bg-card p-4 sm:p-5"
           aria-busy="true"
           aria-label="Loading payout account"
         >
-          <div className="flex items-center gap-3">
-            <SkeletonBlock className="h-10 w-10" />
-            <SkeletonBlock className="h-5 w-48" />
+          <SkeletonBlock className="h-10" />
+          <div className="grid grid-cols-[80px_minmax(0,1fr)] gap-4 sm:grid-cols-[112px_minmax(0,1fr)] lg:grid-cols-[128px_minmax(0,1fr)_272px]">
+            <SkeletonBlock className="aspect-square w-full rounded-2xl" />
+            <div className="space-y-3 self-center">
+              <SkeletonBlock className="h-6 w-56" />
+              <SkeletonBlock className="h-4 w-40" />
+              <SkeletonBlock className="h-10 w-48" />
+            </div>
+            <div className="col-span-2 space-y-2.5 lg:col-span-1">
+              <SkeletonBlock className="h-11 rounded-full" />
+              <SkeletonBlock className="h-11 rounded-full" />
+            </div>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {[0, 1, 2, 3].map((item) => (
-              <SkeletonBlock key={item} className="h-10" />
-            ))}
-          </div>
-          <SkeletonBlock className="h-12" />
-        </Card>
+        </div>
       </V1Page>
     );
   }
@@ -311,157 +317,169 @@ export function BankAccountV1() {
       {view === "overview" && (
         <>
           <PageHeader title="Bank account" description="Where your Koko payouts are sent." />
-          <Card className="max-w-[760px]" aria-labelledby="payout-heading">
-            <div className="flex flex-wrap items-start gap-3">
-              <BankLogo bank={data.account.bank} />
-              <div className="min-w-0 flex-1 basis-40">
-                <h2
-                  id="payout-heading"
-                  ref={heading}
-                  tabIndex={-1}
-                  className="text-[16px] font-semibold outline-none"
+          <section
+            aria-labelledby="payout-heading"
+            className="max-w-[920px] rounded-[20px] border border-border bg-card p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_rgba(16,24,40,0.06)] sm:p-5"
+          >
+            {pending ? (
+              <StatusBar tone="pending">
+                Change in review · Expected by {fmtDate(addBusinessDays(pending.date, reviewDays))}
+              </StatusBar>
+            ) : activeFrom ? (
+              <StatusBar tone="info">Approved · Payouts start {fmtDateTime(activeFrom)}</StatusBar>
+            ) : (
+              <StatusBar tone="active">Active</StatusBar>
+            )}
+
+            <div className="mt-4 grid grid-cols-[80px_minmax(0,1fr)] gap-x-4 gap-y-5 sm:grid-cols-[112px_minmax(0,1fr)] sm:gap-x-6 lg:grid-cols-[128px_minmax(0,1fr)_272px]">
+              <div
+                className="flex aspect-square w-full items-center justify-center rounded-2xl bg-[#f4f4f6]"
+                aria-hidden="true"
+              >
+                <div className="scale-125 sm:scale-150">
+                  <BankLogo bank={data.account.bank} />
+                </div>
+              </div>
+
+              <div className="min-w-0 space-y-4 self-center">
+                <div>
+                  <h2
+                    id="payout-heading"
+                    ref={heading}
+                    tabIndex={-1}
+                    className="text-[18px] font-medium leading-snug outline-none"
+                  >
+                    <span className="sr-only">Payout account: </span>
+                    {data.account.bank}{" "}
+                    <span className="whitespace-nowrap">{mask(data.account.number)}</span>
+                  </h2>
+                  <p className="mt-1 text-[14px] text-muted-foreground">
+                    {data.account.holder} · {data.account.branch} branch
+                  </p>
+                </div>
+                <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                  <div>
+                    <dt className="text-[14px] text-muted-foreground">Next payout</dt>
+                    <dd className="mt-0.5 text-[17px]">
+                      <span className="tabular-nums">{lkr(NEXT_PAYOUT.amount)}</span>{" "}
+                      <span className="whitespace-nowrap">on {nextPayout()}</span>
+                    </dd>
+                  </div>
+                  {pending ? (
+                    <div>
+                      <dt className="text-[14px] text-muted-foreground">Requested change</dt>
+                      <dd className="mt-0.5 text-[17px]">{accountLabel(pending.account)}</dd>
+                    </div>
+                  ) : activeFrom ? (
+                    <div>
+                      <dt className="text-[14px] text-muted-foreground">
+                        Payouts to this account start
+                      </dt>
+                      <dd className="mt-0.5 text-[17px]">{fmtDateTime(activeFrom)}</dd>
+                    </div>
+                  ) : null}
+                </dl>
+              </div>
+
+              <div className="col-span-2 space-y-2.5 sm:col-span-2 lg:col-span-1">
+                {pending ? (
+                  <>
+                    <PillAction chevron onClick={() => setOpenId(pending.id)}>
+                      View request
+                    </PillAction>
+                    {canManage && (
+                      <PillAction
+                        tone="danger"
+                        onClick={() => {
+                          setConfirmCancel(true);
+                          setOpenId(pending.id);
+                        }}
+                      >
+                        Cancel request
+                      </PillAction>
+                    )}
+                  </>
+                ) : (
+                  canManage && (
+                    <PillAction onClick={startChange}>
+                      {hasDraft ? "Continue your change" : "Change payout account"}
+                    </PillAction>
+                  )
+                )}
+                <PillAction
+                  chevron
+                  onClick={() =>
+                    setSearch({
+                      ...Object.fromEntries(VIEW_KEYS.map((key) => [key, null])),
+                      page: "financial-statement",
+                    })
+                  }
                 >
-                  Payout account
-                </h2>
-                <p className="text-[14px] text-muted-foreground">
-                  {data.account.bank} · {data.account.branch}
+                  Payout history
+                </PillAction>
+                <p className="flex items-start gap-1.5 px-1 pt-1 text-xs text-muted-foreground">
+                  {canManage ? (
+                    pending ? (
+                      <>
+                        Payouts keep going to {mask(data.account.number)} until the change is
+                        approved.
+                      </>
+                    ) : (
+                      <>
+                        Changes are reviewed in {REVIEW_TIMES.bankAccount}. Payouts continue
+                        meanwhile.
+                      </>
+                    )
+                  ) : (
+                    <>
+                      <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      Only Super Admins and Finance Admins can change payout details.
+                    </>
+                  )}
                 </p>
               </div>
-              {activeFrom ? (
-                <StatusBadge status="Pending" label="Starting soon" />
-              ) : (
-                <StatusBadge status="Active" />
-              )}
             </div>
-            <div className="mt-5">
-              <DefinitionList
-                items={[
-                  ["Account holder", data.account.holder],
-                  ["Account number", mask(data.account.number)],
-                  ["Bank", data.account.bank],
-                  ["Branch", data.account.branch],
-                ]}
-              />
-            </div>
-            {activeFrom && (
-              <InlineAlert
-                tone="info"
-                className="mt-5"
-                title={`Payouts to this account start ${fmtDateTime(activeFrom)}`}
-              >
-                For your security, a new payout account starts receiving payouts{" "}
-                {REVIEW_TIMES.payoutHoldHours} hours after it's approved.
-              </InlineAlert>
-            )}
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-xl bg-[#f6f6f8] px-4 py-3 text-[14px]">
-              <p>
-                <span className="text-muted-foreground">Next payout </span>
-                <span className="font-semibold tabular-nums">
-                  {lkr(NEXT_PAYOUT.amount)}
-                </span> on {nextPayout()}
-              </p>
-              <p className="text-muted-foreground">To {mask(data.account.number)}</p>
-            </div>
-
-            {pending && (
-              <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
-                <div className="flex flex-wrap items-start gap-3">
-                  <StatusBadge status="Pending" />
-                  <div className="min-w-0 flex-1 basis-56">
-                    <p className="text-[14px] font-semibold">
-                      Change to {accountLabel(pending.account)} is in review
-                    </p>
-                    <p className="mt-1 text-[14px]">
-                      Submitted {fmtDate(pending.date)}. Expected by{" "}
-                      {fmtDate(addBusinessDays(pending.date, reviewDays))}. Payouts keep going to{" "}
-                      {mask(data.account.number)} until it's approved.
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Btn variant="secondary" size="sm" onClick={() => setOpenId(pending.id)}>
-                    View request
-                  </Btn>
-                  {canManage && (
-                    <Btn
-                      variant="danger"
-                      size="sm"
-                      onClick={() => {
-                        setConfirmCancel(true);
-                        setOpenId(pending.id);
-                      }}
-                    >
-                      Cancel request
-                    </Btn>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {(!canManage || !pending) && (
-              <div className="mt-5 border-t border-border pt-5">
-                {canManage ? (
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                    <Btn variant="secondary" onClick={startChange}>
-                      {hasDraft ? "Continue your change" : "Change payout account"}
-                      <ArrowRight aria-hidden="true" />
-                    </Btn>
-                    <p className="text-[14px] text-muted-foreground">
-                      Reviewed in {REVIEW_TIMES.bankAccount}. Payouts keep going to this account
-                      until a change is approved.
-                    </p>
-                  </div>
-                ) : (
-                  <p className="flex items-start gap-2 text-[14px] text-muted-foreground">
-                    <Lock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                    Only Super Admins and Finance Admins can change payout details. Ask one of them
-                    if this account needs to change.
-                  </p>
-                )}
-              </div>
-            )}
-          </Card>
+          </section>
 
           {history.length > 0 && (
-            <section className="max-w-[760px] space-y-3" aria-labelledby="ba-history">
+            <section className="max-w-[920px] space-y-3" aria-labelledby="ba-history">
               <h2 id="ba-history" className="text-[16px] font-semibold">
                 Change history
               </h2>
-              <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+              <ul className="divide-y divide-border overflow-hidden rounded-[20px] border border-border bg-card shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
                 {history.map((request) => (
-                  <li
-                    key={request.id}
-                    className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3.5 sm:px-5"
-                  >
-                    <div className="min-w-0 flex-1 basis-60">
-                      <p className="flex flex-wrap items-center gap-x-2 text-[14px] font-medium">
-                        {request.from ? (
-                          <>
-                            <span>{accountLabel(request.from)}</span>
-                            <ArrowRight
-                              className="h-3.5 w-3.5 text-muted-foreground"
-                              aria-label="to"
-                            />
-                          </>
-                        ) : null}
-                        <span>{accountLabel(request.account)}</span>
-                      </p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {request.id} · {fmtDate(request.date)}
-                        {request.requestedBy && ` · Requested by ${request.requestedBy}`}
-                      </p>
-                    </div>
-                    <StatusBadge
-                      status={request.status === "Accepted" ? "Approved" : request.status}
-                    />
-                    <Btn
-                      variant="tertiary"
-                      size="sm"
-                      aria-label={`View, ${request.id}`}
+                  <li key={request.id}>
+                    <button
+                      type="button"
                       onClick={() => setOpenId(request.id)}
+                      className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 px-4 py-4 text-left transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900 sm:px-5"
                     >
-                      View
-                    </Btn>
+                      <span className="min-w-0 flex-1 basis-60">
+                        <span className="flex flex-wrap items-center gap-x-2 text-[15px]">
+                          {request.from ? (
+                            <>
+                              <span>{accountLabel(request.from)}</span>
+                              <ArrowRight
+                                className="h-3.5 w-3.5 text-muted-foreground"
+                                aria-label="to"
+                              />
+                            </>
+                          ) : null}
+                          <span>{accountLabel(request.account)}</span>
+                        </span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                          {request.id} · {fmtDate(request.date)}
+                          {request.requestedBy && ` · Requested by ${request.requestedBy}`}
+                        </span>
+                      </span>
+                      <StatusBadge
+                        status={request.status === "Accepted" ? "Approved" : request.status}
+                      />
+                      <ChevronRight
+                        className="h-4 w-4 shrink-0 text-foreground"
+                        aria-hidden="true"
+                      />
+                    </button>
                   </li>
                 ))}
               </ul>

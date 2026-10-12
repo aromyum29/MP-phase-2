@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronLeft,
+  ChevronRight,
   Clock3,
   Copy,
   FileText,
@@ -192,6 +193,57 @@ export const Btn = forwardRef<HTMLButtonElement, BtnProps>(function Btn(
     </button>
   );
 });
+
+// Outlined pill action, used for the stacked actions on summary cards.
+// A chevron marks actions that open another view.
+type PillActionProps = ComponentProps<"button"> & {
+  chevron?: boolean;
+  tone?: "default" | "danger";
+};
+export const PillAction = forwardRef<HTMLButtonElement, PillActionProps>(function PillAction(
+  { chevron = false, tone = "default", className, children, type, ...props },
+  ref,
+) {
+  return (
+    <button
+      ref={ref}
+      type={type ?? "button"}
+      className={cn(
+        "flex min-h-[44px] w-full items-center justify-between gap-3 rounded-full border bg-white px-5 text-left text-[15px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+        tone === "danger"
+          ? "border-[#c25b67] text-[#b4232f] hover:bg-red-50"
+          : "border-[#8e8e9a] text-foreground hover:border-gray-900 hover:bg-gray-50",
+        className,
+      )}
+      {...props}
+    >
+      <span className="min-w-0">{children}</span>
+      {chevron && <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />}
+    </button>
+  );
+});
+
+const STATUS_BAR = {
+  active: "bg-[#eef5ea] text-[#2f6a2a]",
+  pending: "bg-amber-50 text-amber-900",
+  info: "bg-sky-50 text-sky-900",
+};
+// Full-width tinted strip at the top of a summary card.
+export function StatusBar({
+  tone,
+  children,
+}: {
+  tone: keyof typeof STATUS_BAR;
+  children: ReactNode;
+}) {
+  return (
+    <p
+      className={cn("rounded-xl px-4 py-2.5 text-center text-[14px] font-medium", STATUS_BAR[tone])}
+    >
+      {children}
+    </p>
+  );
+}
 
 export function BackLink({ onClick, children }: { onClick: () => void; children: ReactNode }) {
   return (
