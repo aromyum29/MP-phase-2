@@ -197,6 +197,17 @@ export function MerchantPortal({ children, onLogout }: MerchantPortalProps) {
   const [openGroup, setOpenGroup] = useState<string | null>(() => (iteration === '1' && urlPage ? groupFor(urlPage) : null))
   const createOrderCardRef = useRef<HTMLDivElement>(null)
   const [announcement, setAnnouncement] = useState<AnnouncementContent | null>(null)
+  // Iteration 1: the first portal entry in a browser session stands in for
+  // signing in, so the update shows once, full page on the login background.
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('koko-portal-iteration') === '2' || sessionStorage.getItem('koko-announcement-seen-v1')) return
+      sessionStorage.setItem('koko-announcement-seen-v1', '1')
+    } catch {
+      return
+    }
+    setAnnouncement(defaultAnnouncement)
+  }, [])
   const toggleGroup = (id: string) => {
     const opening = openGroup !== id
     setOpenGroup(opening ? id : null)
