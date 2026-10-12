@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { RotateCcw } from "lucide-react";
-import { emptyAccount, initialAccount, lenders, useFinanceData, type LoanStatus } from "../FinanceData";
+import {
+  emptyAccount,
+  initialAccount,
+  lenders,
+  useFinanceData,
+  type LoanStatus,
+} from "../FinanceData";
 import { Switch } from "../ui/switch";
 import { useDemo } from "./demo";
 import {
@@ -38,7 +44,13 @@ export function DemoPanel() {
           : previous.accountActiveFrom,
         bankRequests: previous.bankRequests.map((item) =>
           item.id === id
-            ? { ...item, status: approve ? "Accepted" : "Rejected", decidedAt, reason: approve ? undefined : bankReason, from: item.from ?? previous.account }
+            ? {
+                ...item,
+                status: approve ? "Accepted" : "Rejected",
+                decidedAt,
+                reason: approve ? undefined : bankReason,
+                from: item.from ?? previous.account,
+              }
             : item,
         ),
       };
@@ -48,7 +60,9 @@ export function DemoPanel() {
     setData((previous) => {
       const target = previous.loans.find((item) => item.id === id);
       if (!target) return previous;
-      const conflict = previous.loans.some((item) => item.id !== id && item.bankId === target.bankId && item.status !== "Rejected");
+      const conflict = previous.loans.some(
+        (item) => item.id !== id && item.bankId === target.bankId && item.status !== "Rejected",
+      );
       if (status !== "Rejected" && conflict) return previous;
       return {
         ...previous,
@@ -59,7 +73,10 @@ export function DemoPanel() {
                 status,
                 decidedAt: status === "Pending" ? undefined : now(),
                 reason: status === "Rejected" ? creditReason : undefined,
-                offer: status === "Accepted" ? { amount: item.form.amount, term: item.form.term, rate: OFFER_RATE } : undefined,
+                offer:
+                  status === "Accepted"
+                    ? { amount: item.form.amount, term: item.form.term, rate: OFFER_RATE }
+                    : undefined,
               }
             : item,
         ),
@@ -77,7 +94,9 @@ export function DemoPanel() {
       footer={
         confirmReset ? (
           <div className="flex flex-wrap items-center gap-2">
-            <p className="mr-auto text-[14px]">Clear all requests, drafts and the account change?</p>
+            <p className="mr-auto text-[14px]">
+              Clear all requests, drafts and the account change?
+            </p>
             <Btn variant="tertiary" size="sm" onClick={() => setConfirmReset(false)}>
               Keep data
             </Btn>
@@ -110,9 +129,15 @@ export function DemoPanel() {
           <label className="flex items-start justify-between gap-4 rounded-lg border border-border p-3">
             <span>
               <span className="block text-[14px] font-medium">Fail the next request</span>
-              <span className="block text-xs text-muted-foreground">Shows the error and retry state on the next submit, verify or download.</span>
+              <span className="block text-xs text-muted-foreground">
+                Shows the error and retry state on the next submit, verify or download.
+              </span>
             </span>
-            <Switch checked={settings.failNext} onCheckedChange={(checked) => update({ failNext: checked })} aria-label="Fail the next request" />
+            <Switch
+              checked={settings.failNext}
+              onCheckedChange={(checked) => update({ failNext: checked })}
+              aria-label="Fail the next request"
+            />
           </label>
           <div className="space-y-2">
             <p className="text-[14px] font-medium">Signed-in role</p>
@@ -122,7 +147,9 @@ export function DemoPanel() {
               onChange={(role) => update({ role: role as (typeof DEMO_ROLES)[number] })}
               items={DEMO_ROLES.map((role) => ({ value: role, label: role }))}
             />
-            <p className="text-xs text-muted-foreground">Branch Admin and Cashier see finance pages read-only.</p>
+            <p className="text-xs text-muted-foreground">
+              Branch Admin and Cashier see finance pages read-only.
+            </p>
           </div>
           <div className="space-y-2">
             <p className="text-[14px] font-medium">Merchant credit eligibility</p>
@@ -137,7 +164,8 @@ export function DemoPanel() {
             />
           </div>
           <p className="rounded-lg bg-[#f6f6f8] p-3 text-[14px]">
-            Verification code for the bank account change: <span className="font-mono font-semibold">{DEMO_OTP}</span>
+            Verification code for the bank account change:{" "}
+            <span className="font-mono font-semibold">{DEMO_OTP}</span>
           </p>
         </section>
 
@@ -163,13 +191,19 @@ export function DemoPanel() {
                 <div key={request.id} className="space-y-3 rounded-lg border border-border p-3">
                   <p className="text-[14px] font-medium">
                     {request.account.bank} •••• {request.account.number.slice(-4)}
-                    <span className="block text-xs font-normal text-muted-foreground">{request.id}</span>
+                    <span className="block text-xs font-normal text-muted-foreground">
+                      {request.id}
+                    </span>
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <Btn size="sm" onClick={() => decideBank(request.id, true)}>
                       Approve change
                     </Btn>
-                    <Btn size="sm" variant="secondary" onClick={() => decideBank(request.id, false)}>
+                    <Btn
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => decideBank(request.id, false)}
+                    >
                       Decline change
                     </Btn>
                   </div>
@@ -177,7 +211,9 @@ export function DemoPanel() {
               ))}
             </>
           ) : (
-            <p className="text-[14px] text-muted-foreground">No account change is waiting for review.</p>
+            <p className="text-[14px] text-muted-foreground">
+              No account change is waiting for review.
+            </p>
           )}
         </section>
 
@@ -200,24 +236,45 @@ export function DemoPanel() {
                 </select>
               </label>
               {data.loans.map((request) => {
-                const conflict = data.loans.some((item) => item.id !== request.id && item.bankId === request.bankId && item.status !== "Rejected");
+                const conflict = data.loans.some(
+                  (item) =>
+                    item.id !== request.id &&
+                    item.bankId === request.bankId &&
+                    item.status !== "Rejected",
+                );
                 return (
                   <div key={request.id} className="space-y-3 rounded-lg border border-border p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-[14px] font-medium">
                         {bankName(request.bankId)} · {lkr(request.form.amount)}
-                        <span className="block text-xs font-normal text-muted-foreground">{request.id}</span>
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          {request.id}
+                        </span>
                       </p>
                       <StatusBadge status={request.status} />
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <Btn size="sm" disabled={request.status === "Accepted" || conflict} onClick={() => decideLoan(request.id, "Accepted")}>
+                      <Btn
+                        size="sm"
+                        disabled={request.status === "Accepted" || conflict}
+                        onClick={() => decideLoan(request.id, "Accepted")}
+                      >
                         Accept with offer
                       </Btn>
-                      <Btn size="sm" variant="secondary" disabled={request.status === "Rejected"} onClick={() => decideLoan(request.id, "Rejected")}>
+                      <Btn
+                        size="sm"
+                        variant="secondary"
+                        disabled={request.status === "Rejected"}
+                        onClick={() => decideLoan(request.id, "Rejected")}
+                      >
                         Decline
                       </Btn>
-                      <Btn size="sm" variant="tertiary" disabled={request.status === "Pending" || conflict} onClick={() => decideLoan(request.id, "Pending")}>
+                      <Btn
+                        size="sm"
+                        variant="tertiary"
+                        disabled={request.status === "Pending" || conflict}
+                        onClick={() => decideLoan(request.id, "Pending")}
+                      >
                         Back to in review
                       </Btn>
                     </div>
@@ -234,7 +291,9 @@ export function DemoPanel() {
           <h3 id="demo-placeholders" className="text-[15px] font-semibold">
             Placeholder content in use
           </h3>
-          <p className="text-[14px] text-muted-foreground">Replace these in v1/placeholders.ts once the real values are confirmed.</p>
+          <p className="text-[14px] text-muted-foreground">
+            Replace these in v1/placeholders.ts once the real values are confirmed.
+          </p>
           <ul className="list-disc space-y-1 pl-5 text-[14px]">
             {PLACEHOLDER_SUMMARY.map((item) => (
               <li key={item}>{item}</li>

@@ -53,12 +53,17 @@ export function useSetSearch() {
   }, []);
 }
 
-export function useViewParam<T extends string>(key: string, initial: T, options?: { replace?: boolean }) {
+export function useViewParam<T extends string>(
+  key: string,
+  initial: T,
+  options?: { replace?: boolean },
+) {
   const value = (useSearchValue(key) ?? initial) as T;
   const set = useSetSearch();
   const update = useCallback(
-    (next: T, override?: { replace?: boolean }) => set({ [key]: next === initial ? null : next }, override ?? options),
-    [set, key, initial, options?.replace],
+    (next: T, override?: { replace?: boolean }) =>
+      set({ [key]: next === initial ? null : next }, override ?? options),
+    [set, key, initial, options],
   );
   return [value, update] as const;
 }
@@ -67,11 +72,22 @@ export function useOptionalParam(key: string, options?: { replace?: boolean }) {
   const value = useSearchValue(key);
   const set = useSetSearch();
   const update = useCallback(
-    (next: string | null, override?: { replace?: boolean }) => set({ [key]: next }, override ?? options),
-    [set, key, options?.replace],
+    (next: string | null, override?: { replace?: boolean }) =>
+      set({ [key]: next }, override ?? options),
+    [set, key, options],
   );
   return [value, update] as const;
 }
 
 // Keys owned by the iteration 1 pages; cleared when the page changes.
-export const VIEW_KEYS = ["tab", "status", "apply", "step", "request", "change", "category", "q", "asset"];
+export const VIEW_KEYS = [
+  "tab",
+  "status",
+  "apply",
+  "step",
+  "request",
+  "change",
+  "category",
+  "q",
+  "asset",
+];

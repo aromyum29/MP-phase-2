@@ -55,3 +55,10 @@ the Multiple updates or Single update announcement templates. Preview over
 Create Order places the chosen template exactly over the order card. Multiple
 updates have individual Explore links, plus Create new order and Dismiss
 actions that both return to Create Order.
+
+Iteration 1 production pass (12 October 2026): Bank account, Merchant credit and
+Koko assets are rebuilt from src/merchant/components/v1/ (iteration 2 keeps the
+original components). Open Version switcher > Demo panel to approve or decline
+requests, make the next request fail, switch role or eligibility, and see the
+bank account verification code (123456). Pages and views are kept in the URL
+(?page=bank-account etc.). Placeholder values live in v1/placeholders.ts.

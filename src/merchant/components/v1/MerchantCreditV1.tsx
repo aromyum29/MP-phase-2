@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowRight, Bell, BellRing, CheckCircle2, ExternalLink, FileText, Lock, TrendingUp } from "lucide-react";
+import {
+  ArrowRight,
+  Bell,
+  BellRing,
+  CheckCircle2,
+  ExternalLink,
+  FileText,
+  Lock,
+  TrendingUp,
+} from "lucide-react";
 import { BankLogo } from "../BankLogo";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../ui/dialog";
 import {
@@ -12,7 +21,15 @@ import {
   type LoanRequest,
 } from "../FinanceData";
 import { useAction, useCanManageFinance, useDemo, useFirstLoad } from "./demo";
-import { BUSINESS, COMING_SOON_BANKS, CURRENT_USER, KOKO_SALES, LEGAL, LENDER_LINKS, LENDER_TERMS } from "./placeholders";
+import {
+  BUSINESS,
+  COMING_SOON_BANKS,
+  CURRENT_USER,
+  KOKO_SALES,
+  LEGAL,
+  LENDER_LINKS,
+  LENDER_TERMS,
+} from "./placeholders";
 import {
   BackLink,
   Btn,
@@ -56,18 +73,34 @@ const PURPOSE_LABELS: Record<string, string> = {
   Other: "Something else",
 };
 const decisionDays = 5;
-const purposeText = (form: LoanForm) => (form.purpose === "Other" && form.purposeOther ? form.purposeOther : PURPOSE_LABELS[form.purpose] ?? form.purpose);
-const bankName = (id: string) => lenders.find((lender) => lender.id === id)?.name ?? COMING_SOON_BANKS.find((bank) => bank.id === id)?.name ?? "Bank";
+const purposeText = (form: LoanForm) =>
+  form.purpose === "Other" && form.purposeOther
+    ? form.purposeOther
+    : (PURPOSE_LABELS[form.purpose] ?? form.purpose);
+const bankName = (id: string) =>
+  lenders.find((lender) => lender.id === id)?.name ??
+  COMING_SOON_BANKS.find((bank) => bank.id === id)?.name ??
+  "Bank";
 
 function useEligibility() {
   const { settings } = useDemo();
   const sales = KOKO_SALES[settings.eligibility];
   const terms = LENDER_TERMS.sampath;
-  const average = Math.round(sales.monthly.reduce((sum, value) => sum + value, 0) / sales.monthly.length);
+  const average = Math.round(
+    sales.monthly.reduce((sum, value) => sum + value, 0) / sales.monthly.length,
+  );
   const monthsOk = sales.monthsOnKoko >= terms.minMonths;
   const salesOk = average >= terms.minMonthlySales;
   const estimate = Math.min(terms.max, Math.floor((average * terms.multiple) / 10000) * 10000);
-  return { average, months: sales.monthsOnKoko, monthsOk, salesOk, eligible: monthsOk && salesOk, estimate, terms };
+  return {
+    average,
+    months: sales.monthsOnKoko,
+    monthsOk,
+    salesOk,
+    eligible: monthsOk && salesOk,
+    estimate,
+    terms,
+  };
 }
 
 export function MerchantCreditV1() {
@@ -88,11 +121,15 @@ export function MerchantCreditV1() {
   const cancelAction = useAction();
 
   const requests: AnyLoan[] = useMemo(
-    () => [...data.loans, ...(data.cancelledLoans ?? [])].sort((a, b) => b.date.localeCompare(a.date)),
+    () =>
+      [...data.loans, ...(data.cancelledLoans ?? [])].sort((a, b) => b.date.localeCompare(a.date)),
     [data.loans, data.cancelledLoans],
   );
-  const activeFor = (bankId: string) => data.loans.find((request) => request.bankId === bankId && request.status !== "Rejected");
-  const drafts = Object.entries(data.loanDrafts).filter(([id]) => lenders.some((lender) => lender.id === id) && !activeFor(id));
+  const activeFor = (bankId: string) =>
+    data.loans.find((request) => request.bankId === bankId && request.status !== "Rejected");
+  const drafts = Object.entries(data.loanDrafts).filter(
+    ([id]) => lenders.some((lender) => lender.id === id) && !activeFor(id),
+  );
   const detail = requests.find((request) => request.id === openId);
   // A request that's already open can't be edited, e.g. after Back from the confirmation.
   useEffect(() => {
@@ -121,9 +158,16 @@ export function MerchantCreditV1() {
     const on = !(data.notifyBanks ?? []).includes(bankId);
     setData((previous) => {
       const current = previous.notifyBanks ?? [];
-      return { ...previous, notifyBanks: on ? [...current, bankId] : current.filter((id) => id !== bankId) };
+      return {
+        ...previous,
+        notifyBanks: on ? [...current, bankId] : current.filter((id) => id !== bankId),
+      };
     });
-    notify(on ? `We'll let you know when ${bankName(bankId)} joins` : `Notifications off for ${bankName(bankId)}`);
+    notify(
+      on
+        ? `We'll let you know when ${bankName(bankId)} joins`
+        : `Notifications off for ${bankName(bankId)}`,
+    );
   };
   const cancelRequest = async (id: string) => {
     const ok = await cancelAction.run(() =>
@@ -133,7 +177,10 @@ export function MerchantCreditV1() {
         return {
           ...previous,
           loans: previous.loans.filter((item) => item.id !== id),
-          cancelledLoans: [{ ...request, status: "Cancelled", cancelledAt: new Date().toISOString() }, ...(previous.cancelledLoans ?? [])],
+          cancelledLoans: [
+            { ...request, status: "Cancelled", cancelledAt: new Date().toISOString() },
+            ...(previous.cancelledLoans ?? []),
+          ],
         };
       }),
     );
@@ -146,7 +193,10 @@ export function MerchantCreditV1() {
   if (loading) {
     return (
       <V1Page>
-        <PageHeader title="Merchant credit" description="Business funding from partner banks, based on your Koko sales." />
+        <PageHeader
+          title="Merchant credit"
+          description="Business funding from partner banks, based on your Koko sales."
+        />
         <div className="space-y-4" aria-busy="true" aria-label="Loading merchant credit">
           <SkeletonBlock className="h-11 w-64" />
           <SkeletonBlock className="h-36 max-w-[880px]" />
@@ -185,9 +235,12 @@ export function MerchantCreditV1() {
         <Card className="max-w-[720px] space-y-5">
           <CheckCircle2 className="h-10 w-10 text-emerald-700" aria-hidden="true" />
           <div>
-            <h1 className="text-xl font-semibold">Request sent to {bankName(submitted?.bankId ?? "sampath")}</h1>
+            <h1 className="text-xl font-semibold">
+              Request sent to {bankName(submitted?.bankId ?? "sampath")}
+            </h1>
             <p className="mt-2 text-[14px] text-muted-foreground">
-              The bank usually responds in {eligibility.terms.decision}. We'll email {CURRENT_USER.email} when it does. Sending a request doesn't guarantee credit.
+              The bank usually responds in {eligibility.terms.decision}. We'll email{" "}
+              {CURRENT_USER.email} when it does. Sending a request doesn't guarantee credit.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-[#f6f6f8] px-4 py-2">
@@ -231,12 +284,18 @@ export function MerchantCreditV1() {
     Rejected: requests.filter((request) => request.status === "Rejected").length,
     Cancelled: requests.filter((request) => request.status === "Cancelled").length,
   };
-  const visible = filter === "draft" ? [] : requests.filter((request) => filter === "all" || request.status === filter);
+  const visible =
+    filter === "draft"
+      ? []
+      : requests.filter((request) => filter === "all" || request.status === filter);
   const showDrafts = filter === "all" || filter === "draft";
 
   return (
     <V1Page>
-      <PageHeader title="Merchant credit" description="Business funding from partner banks, based on your Koko sales." />
+      <PageHeader
+        title="Merchant credit"
+        description="Business funding from partner banks, based on your Koko sales."
+      />
       <UnderlineTabs
         label="Merchant credit"
         value={tab}
@@ -259,10 +318,16 @@ export function MerchantCreditV1() {
               {[
                 ["Check what you could get", "Your estimate is based on your Koko sales."],
                 ["Apply in about 5 minutes", "Most details are filled in from your Koko profile."],
-                ["The bank decides", `Usually in ${eligibility.terms.decision}. You continue with the bank if accepted.`],
+                [
+                  "The bank decides",
+                  `Usually in ${eligibility.terms.decision}. You continue with the bank if accepted.`,
+                ],
               ].map(([title, body], index) => (
                 <li key={title} className="flex gap-3 rounded-xl bg-[#f6f6f8] p-4">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 text-xs font-semibold text-white" aria-hidden="true">
+                  <span
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 text-xs font-semibold text-white"
+                    aria-hidden="true"
+                  >
                     {index + 1}
                   </span>
                   <span>
@@ -288,14 +353,19 @@ export function MerchantCreditV1() {
                     <BankLogo bank={lender.name} />
                     <div className="min-w-0 flex-1">
                       <h3 className="text-[16px] font-semibold">{lender.name}</h3>
-                      <p className="text-[14px] text-muted-foreground">Business funding through Koko</p>
+                      <p className="text-[14px] text-muted-foreground">
+                        Business funding through Koko
+                      </p>
                     </div>
                     {active && <StatusBadge status={active.status} />}
                   </div>
                   <DefinitionList
                     items={[
                       ["Amount", `${lkr(terms.min)} – ${lkr(terms.max)}`],
-                      ["Repayment period", `${terms.terms[0]}–${terms.terms[terms.terms.length - 1]} months`],
+                      [
+                        "Repayment period",
+                        `${terms.terms[0]}–${terms.terms[terms.terms.length - 1]} months`,
+                      ],
                       ["Decision", `Usually ${terms.decision}`],
                       ["Interest and fees", terms.rates],
                     ]}
@@ -317,7 +387,9 @@ export function MerchantCreditV1() {
                         <Btn variant="secondary" onClick={() => setOpenId(active.id)}>
                           View request
                         </Btn>
-                        <p className="text-[14px] text-muted-foreground">You can have one open request with each bank.</p>
+                        <p className="text-[14px] text-muted-foreground">
+                          You can have one open request with each bank.
+                        </p>
                       </>
                     ) : !canManage ? (
                       <p className="flex items-start gap-2 text-[14px] text-muted-foreground">
@@ -325,10 +397,15 @@ export function MerchantCreditV1() {
                         Only Super Admins and Finance Admins can apply for merchant credit.
                       </p>
                     ) : !eligibility.eligible ? (
-                      <p className="text-[14px] text-muted-foreground">You can apply once your business meets the requirements above.</p>
+                      <p className="text-[14px] text-muted-foreground">
+                        You can apply once your business meets the requirements above.
+                      </p>
                     ) : draft ? (
                       discarding === lender.id ? (
-                        <DiscardConfirm onDiscard={() => discardDraft(lender.id)} onKeep={() => setDiscarding(null)} />
+                        <DiscardConfirm
+                          onDiscard={() => discardDraft(lender.id)}
+                          onKeep={() => setDiscarding(null)}
+                        />
                       ) : (
                         <>
                           <Btn onClick={() => startApplication(lender.id)}>
@@ -357,7 +434,9 @@ export function MerchantCreditV1() {
               <h2 id="mc-soon" className="text-[16px] font-semibold">
                 More banks coming soon
               </h2>
-              <p className="text-[14px] text-muted-foreground">Get a notification when a bank starts accepting requests through Koko.</p>
+              <p className="text-[14px] text-muted-foreground">
+                Get a notification when a bank starts accepting requests through Koko.
+              </p>
             </div>
             <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
               {COMING_SOON_BANKS.map((bank) => {
@@ -401,22 +480,40 @@ export function MerchantCreditV1() {
           {showDrafts && drafts.length > 0 && (
             <ul className="space-y-2" aria-label="Drafts">
               {drafts.map(([bankId, draft]) => (
-                <li key={bankId} className="flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-[#9a9aa6] bg-card px-4 py-3 sm:px-5">
+                <li
+                  key={bankId}
+                  className="flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-[#9a9aa6] bg-card px-4 py-3 sm:px-5"
+                >
                   <BankLogo bank={bankName(bankId)} />
                   <div className="min-w-0 flex-1 basis-48">
                     <p className="text-[14px] font-medium">{bankName(bankId)}</p>
-                    <p className="text-xs text-muted-foreground">{draft.amount ? `${lkr(draft.amount)} · ` : ""}Not sent yet</p>
+                    <p className="text-xs text-muted-foreground">
+                      {draft.amount ? `${lkr(draft.amount)} · ` : ""}Not sent yet
+                    </p>
                   </div>
                   <StatusBadge status="Draft" />
                   {canManage &&
                     (discarding === bankId ? (
-                      <DiscardConfirm onDiscard={() => discardDraft(bankId)} onKeep={() => setDiscarding(null)} />
+                      <DiscardConfirm
+                        onDiscard={() => discardDraft(bankId)}
+                        onKeep={() => setDiscarding(null)}
+                      />
                     ) : (
                       <div className="flex gap-1">
-                        <Btn size="sm" variant="secondary" aria-label={`Continue, ${bankName(bankId)} draft`} onClick={() => startApplication(bankId)}>
+                        <Btn
+                          size="sm"
+                          variant="secondary"
+                          aria-label={`Continue, ${bankName(bankId)} draft`}
+                          onClick={() => startApplication(bankId)}
+                        >
                           Continue
                         </Btn>
-                        <Btn size="sm" variant="tertiary" aria-label={`Discard, ${bankName(bankId)} draft`} onClick={() => setDiscarding(bankId)}>
+                        <Btn
+                          size="sm"
+                          variant="tertiary"
+                          aria-label={`Discard, ${bankName(bankId)} draft`}
+                          onClick={() => setDiscarding(bankId)}
+                        >
                           Discard
                         </Btn>
                       </div>
@@ -463,14 +560,21 @@ export function MerchantCreditV1() {
                         </th>
                         <td className="px-5 py-3.5">
                           <p className="font-medium tabular-nums">{lkr(request.form.amount)}</p>
-                          <p className="text-xs text-muted-foreground">{purposeText(request.form)}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {purposeText(request.form)}
+                          </p>
                         </td>
                         <td className="whitespace-nowrap px-5 py-3.5">{fmtDate(request.date)}</td>
                         <td className="px-5 py-3.5">
                           <StatusBadge status={request.status} />
                         </td>
                         <td className="px-5 py-3.5 text-right">
-                          <Btn variant="tertiary" size="sm" aria-label={`View, ${request.id}`} onClick={() => setOpenId(request.id)}>
+                          <Btn
+                            variant="tertiary"
+                            size="sm"
+                            aria-label={`View, ${request.id}`}
+                            onClick={() => setOpenId(request.id)}
+                          >
                             View
                           </Btn>
                         </td>
@@ -491,15 +595,21 @@ export function MerchantCreditV1() {
                         <span className="flex items-center gap-3">
                           <BankLogo bank={bankName(request.bankId)} />
                           <span>
-                            <span className="block text-[14px] font-semibold">{bankName(request.bankId)}</span>
-                            <span className="block text-xs text-muted-foreground">{request.id}</span>
+                            <span className="block text-[14px] font-semibold">
+                              {bankName(request.bankId)}
+                            </span>
+                            <span className="block text-xs text-muted-foreground">
+                              {request.id}
+                            </span>
                           </span>
                         </span>
                         <StatusBadge status={request.status} />
                       </span>
                       <span className="flex flex-wrap justify-between gap-2 text-[14px]">
                         <span className="font-medium tabular-nums">{lkr(request.form.amount)}</span>
-                        <span className="text-muted-foreground">Submitted {fmtDate(request.date)}</span>
+                        <span className="text-muted-foreground">
+                          Submitted {fmtDate(request.date)}
+                        </span>
                       </span>
                     </button>
                   </li>
@@ -511,7 +621,9 @@ export function MerchantCreditV1() {
             <div className="rounded-2xl border border-dashed border-[#9a9aa6] px-6 py-10 text-center">
               <FileText className="mx-auto mb-3 h-7 w-7 text-muted-foreground" aria-hidden="true" />
               <p className="text-[15px] font-semibold">
-                {filter === "all" ? "No requests yet" : `No ${filter === "draft" ? "drafts" : statusLabel(filter).toLowerCase() + " requests"}`}
+                {filter === "all"
+                  ? "No requests yet"
+                  : `No ${filter === "draft" ? "drafts" : statusLabel(filter).toLowerCase() + " requests"}`}
               </p>
               <p className="mx-auto mt-1 max-w-md text-[14px] text-muted-foreground">
                 {filter === "all"
@@ -547,24 +659,49 @@ export function MerchantCreditV1() {
           detail?.status === "Accepted" ? (
             <div className="space-y-2">
               <Btn asChild block className="sm:w-full">
-                <a href={LENDER_LINKS[detail.bankId]?.apply ?? "#"} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={LENDER_LINKS[detail.bankId]?.apply ?? "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   Continue with {bankName(detail.bankId)}
                   <ExternalLink aria-hidden="true" />
-                  <span className="sr-only">(opens {LENDER_LINKS[detail.bankId]?.label ?? "the bank's website"} in a new tab)</span>
+                  <span className="sr-only">
+                    (opens {LENDER_LINKS[detail.bankId]?.label ?? "the bank's website"} in a new
+                    tab)
+                  </span>
                 </a>
               </Btn>
-              <p className="text-xs text-muted-foreground">You'll leave Koko. The bank shares the agreement and asks for any documents it needs.</p>
+              <p className="text-xs text-muted-foreground">
+                You'll leave Koko. The bank shares the agreement and asks for any documents it
+                needs.
+              </p>
             </div>
           ) : detail?.status === "Pending" && canManage ? (
             confirmCancel ? (
               <div className="space-y-3">
-                <p className="text-[14px] font-medium">Cancel this request? {bankName(detail.bankId)} will stop reviewing it.</p>
-                {cancelAction.error && <InlineAlert tone="error" title="The request wasn't cancelled">{cancelAction.error}</InlineAlert>}
+                <p className="text-[14px] font-medium">
+                  Cancel this request? {bankName(detail.bankId)} will stop reviewing it.
+                </p>
+                {cancelAction.error && (
+                  <InlineAlert tone="error" title="The request wasn't cancelled">
+                    {cancelAction.error}
+                  </InlineAlert>
+                )}
                 <div className="flex flex-wrap gap-2">
-                  <Btn variant="danger" className="border border-[#b4232f]" loading={cancelAction.pending} onClick={() => cancelRequest(detail.id)}>
+                  <Btn
+                    variant="danger"
+                    className="border border-[#b4232f]"
+                    loading={cancelAction.pending}
+                    onClick={() => cancelRequest(detail.id)}
+                  >
                     Cancel request
                   </Btn>
-                  <Btn variant="tertiary" disabled={cancelAction.pending} onClick={() => setConfirmCancel(false)}>
+                  <Btn
+                    variant="tertiary"
+                    disabled={cancelAction.pending}
+                    onClick={() => setConfirmCancel(false)}
+                  >
                     Keep request
                   </Btn>
                 </div>
@@ -615,14 +752,21 @@ function EligibilityCard({ eligibility }: { eligibility: ReturnType<typeof useEl
     return (
       <Card className="border-emerald-300 bg-emerald-50/50">
         <div className="flex flex-wrap items-start gap-4">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800" aria-hidden="true">
+          <span
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800"
+            aria-hidden="true"
+          >
             <TrendingUp className="h-5 w-5" />
           </span>
           <div className="min-w-0 flex-1 basis-64">
             <p className="text-[14px] font-medium text-emerald-900">You're eligible</p>
-            <h2 className="mt-1 text-[22px] font-bold tracking-tight">You could request up to {lkr(eligibility.estimate)}</h2>
+            <h2 className="mt-1 text-[22px] font-bold tracking-tight">
+              You could request up to {lkr(eligibility.estimate)}
+            </h2>
             <p className="mt-1 text-[14px] text-muted-foreground">
-              Based on {lkr(eligibility.average)} average monthly Koko sales over the last 6 months and {eligibility.months} months on Koko. This is an estimate. The bank makes the final decision.
+              Based on {lkr(eligibility.average)} average monthly Koko sales over the last 6 months
+              and {eligibility.months} months on Koko. This is an estimate. The bank makes the final
+              decision.
             </p>
           </div>
         </div>
@@ -630,42 +774,87 @@ function EligibilityCard({ eligibility }: { eligibility: ReturnType<typeof useEl
     );
   }
   const factors: Array<{ label: string; value: string; ok: boolean }> = [
-    { label: "Time selling with Koko", value: `${eligibility.months} of ${terms.minMonths} months needed`, ok: eligibility.monthsOk },
-    { label: "Average monthly Koko sales", value: `${lkr(eligibility.average)} of ${lkr(terms.minMonthlySales)} needed`, ok: eligibility.salesOk },
+    {
+      label: "Time selling with Koko",
+      value: `${eligibility.months} of ${terms.minMonths} months needed`,
+      ok: eligibility.monthsOk,
+    },
+    {
+      label: "Average monthly Koko sales",
+      value: `${lkr(eligibility.average)} of ${lkr(terms.minMonthlySales)} needed`,
+      ok: eligibility.salesOk,
+    },
   ];
   return (
     <Card>
       <h2 className="text-[18px] font-semibold">Not eligible yet</h2>
-      <p className="mt-1 text-[14px] text-muted-foreground">Partner banks look at your Koko sales history. Here's where your business stands.</p>
+      <p className="mt-1 text-[14px] text-muted-foreground">
+        Partner banks look at your Koko sales history. Here's where your business stands.
+      </p>
       <ul className="mt-4 divide-y divide-border rounded-xl border border-border">
         {factors.map((factor) => (
-          <li key={factor.label} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+          <li
+            key={factor.label}
+            className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
+          >
             <span>
               <span className="block text-[14px] font-medium">{factor.label}</span>
               <span className="block text-[14px] text-muted-foreground">{factor.value}</span>
             </span>
-            <StatusBadge status={factor.ok ? "Verified" : "Pending"} label={factor.ok ? "Met" : "Needs work"} />
+            <StatusBadge
+              status={factor.ok ? "Verified" : "Pending"}
+              label={factor.ok ? "Met" : "Needs work"}
+            />
           </li>
         ))}
       </ul>
-      <p className="mt-4 text-[14px] text-muted-foreground">Keep taking payments with Koko. We'll let you know as soon as you qualify.</p>
+      <p className="mt-4 text-[14px] text-muted-foreground">
+        Keep taking payments with Koko. We'll let you know as soon as you qualify.
+      </p>
     </Card>
   );
 }
 
 function timelineFor(request: AnyLoan): TimelineItem[] {
-  const items: TimelineItem[] = [{ label: "Submitted", date: fmtDateTime(request.date), state: "done" }];
+  const items: TimelineItem[] = [
+    { label: "Submitted", date: fmtDateTime(request.date), state: "done" },
+  ];
   if (request.status === "Pending") {
-    items.push({ label: `${bankName(request.bankId)} reviews your request`, note: `Expected by ${fmtDate(addBusinessDays(request.date, decisionDays))}`, state: "current" });
+    items.push({
+      label: `${bankName(request.bankId)} reviews your request`,
+      note: `Expected by ${fmtDate(addBusinessDays(request.date, decisionDays))}`,
+      state: "current",
+    });
     items.push({ label: "Decision", state: "upcoming" });
-    items.push({ label: "Continue with the bank", note: "If accepted, you finish the agreement with the bank.", state: "upcoming" });
+    items.push({
+      label: "Continue with the bank",
+      note: "If accepted, you finish the agreement with the bank.",
+      state: "upcoming",
+    });
   } else if (request.status === "Accepted") {
-    items.push({ label: "Accepted", date: request.decidedAt ? fmtDateTime(request.decidedAt) : undefined, state: "done" });
-    items.push({ label: "Continue with the bank", note: "Sign the agreement and share any documents the bank asks for.", state: "current" });
+    items.push({
+      label: "Accepted",
+      date: request.decidedAt ? fmtDateTime(request.decidedAt) : undefined,
+      state: "done",
+    });
+    items.push({
+      label: "Continue with the bank",
+      note: "Sign the agreement and share any documents the bank asks for.",
+      state: "current",
+    });
   } else if (request.status === "Rejected") {
-    items.push({ label: "Declined", date: request.decidedAt ? fmtDateTime(request.decidedAt) : undefined, note: request.reason, state: "failed" });
+    items.push({
+      label: "Declined",
+      date: request.decidedAt ? fmtDateTime(request.decidedAt) : undefined,
+      note: request.reason,
+      state: "failed",
+    });
   } else {
-    items.push({ label: "Cancelled by you", date: fmtDateTime("cancelledAt" in request ? request.cancelledAt : request.date), state: "failed" });
+    items.push({
+      label: "Cancelled by you",
+      date: fmtDateTime("cancelledAt" in request ? request.cancelledAt : request.date),
+      state: "failed",
+    });
   }
   return items;
 }
@@ -688,7 +877,9 @@ function LoanDetail({ request, onRestart }: { request: AnyLoan; onRestart?: () =
           ) : (
             "Continue with the bank to see the offer and sign the agreement."
           )}
-          <p className="mt-3">No money has been paid out yet. Funds are released after you sign the bank's agreement.</p>
+          <p className="mt-3">
+            No money has been paid out yet. Funds are released after you sign the bank's agreement.
+          </p>
         </InlineAlert>
       )}
       {request.status === "Rejected" && (
@@ -732,13 +923,16 @@ function LoanDetail({ request, onRestart }: { request: AnyLoan; onRestart?: () =
           items={[
             ["Average monthly revenue", lkr(form.revenue)],
             ["Existing business borrowing", form.borrowing || "Not given"],
-            ...(form.borrowing === "Yes" ? ([["Monthly repayments", lkr(form.repayments)]] as Array<[string, string]>) : []),
+            ...(form.borrowing === "Yes"
+              ? ([["Monthly repayments", lkr(form.repayments)]] as Array<[string, string]>)
+              : []),
           ]}
         />
       </DetailGroup>
       {request.consent && (
         <p className="rounded-xl bg-[#f6f6f8] p-3 text-xs text-muted-foreground">
-          Consent to the CRIB check and to apply on behalf of the business given by {request.consent.by} on {fmtDateTime(request.consent.at)}.
+          Consent to the CRIB check and to apply on behalf of the business given by{" "}
+          {request.consent.by} on {fmtDateTime(request.consent.at)}.
         </p>
       )}
     </div>
@@ -788,14 +982,24 @@ function Application({
     [eligibility.average],
   );
   const saved = data.loanDrafts[bankId];
-  const form: LoanForm = { ...defaults, ...saved, business: BUSINESS.name, registration: BUSINESS.registration };
+  const form: LoanForm = {
+    ...defaults,
+    ...saved,
+    business: BUSINESS.name,
+    registration: BUSINESS.registration,
+  };
   // A draft is created on the first change, never just by opening the form.
   const update = (key: keyof LoanForm, value: string) =>
     setData((previous) => ({
       ...previous,
       loanDrafts: {
         ...previous.loanDrafts,
-        [bankId]: { ...defaults, ...previous.loanDrafts[bankId], [key]: value, ...(key === "borrowing" && value === "No" ? { repayments: "" } : {}) },
+        [bankId]: {
+          ...defaults,
+          ...previous.loanDrafts[bankId],
+          [key]: value,
+          ...(key === "borrowing" && value === "No" ? { repayments: "" } : {}),
+        },
       },
     }));
   const [attempts, setAttempts] = useState<Record<number, number>>({});
@@ -816,24 +1020,33 @@ function Application({
     const next: Record<string, string> = {};
     if (index === 0) {
       if (!form.amount) next["mc-amount"] = "Enter how much you'd like to request.";
-      else if (amount < terms.min || amount > terms.max) next["mc-amount"] = `Enter an amount between ${lkr(terms.min)} and ${lkr(terms.max)}.`;
+      else if (amount < terms.min || amount > terms.max)
+        next["mc-amount"] = `Enter an amount between ${lkr(terms.min)} and ${lkr(terms.max)}.`;
       if (!form.purpose) next["mc-purpose"] = "Choose what the credit is for.";
-      else if (form.purpose === "Other" && !form.purposeOther?.trim()) next["mc-purpose-other"] = "Tell the bank what the credit is for.";
+      else if (form.purpose === "Other" && !form.purposeOther?.trim())
+        next["mc-purpose-other"] = "Tell the bank what the credit is for.";
       if (!form.term) next["mc-term"] = "Choose a repayment period.";
     }
     if (index === 1) {
-      if (!form.contact.trim()) next["mc-contact"] = "Enter the name of the person the bank should contact.";
-      if (!/^(?:0\d{9}|\+94\d{9})$/.test(form.phone.replace(/[\s-]/g, ""))) next["mc-phone"] = "Enter a Sri Lankan mobile number, like 077 123 4567.";
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) next["mc-email"] = "Enter an email address, like name@business.lk.";
+      if (!form.contact.trim())
+        next["mc-contact"] = "Enter the name of the person the bank should contact.";
+      if (!/^(?:0\d{9}|\+94\d{9})$/.test(form.phone.replace(/[\s-]/g, "")))
+        next["mc-phone"] = "Enter a Sri Lankan mobile number, like 077 123 4567.";
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()))
+        next["mc-email"] = "Enter an email address, like name@business.lk.";
     }
     if (index === 2) {
-      if (form.revenue === "") next["mc-revenue"] = "Enter your average monthly revenue. Enter 0 if you have none.";
-      if (!form.borrowing) next["mc-borrowing"] = "Choose whether the business has existing borrowing.";
-      else if (form.borrowing === "Yes" && !Number(form.repayments)) next["mc-repayments"] = "Enter the total you repay each month.";
+      if (form.revenue === "")
+        next["mc-revenue"] = "Enter your average monthly revenue. Enter 0 if you have none.";
+      if (!form.borrowing)
+        next["mc-borrowing"] = "Choose whether the business has existing borrowing.";
+      else if (form.borrowing === "Yes" && !Number(form.repayments))
+        next["mc-repayments"] = "Enter the total you repay each month.";
     }
     if (index === 3) {
       if (!crib) next["mc-crib"] = "Give permission for the CRIB check to send your request.";
-      if (!authorised) next["mc-authorised"] = "Confirm you're authorised to apply for the business.";
+      if (!authorised)
+        next["mc-authorised"] = "Confirm you're authorised to apply for the business.";
     }
     return next;
   };
@@ -858,12 +1071,18 @@ function Application({
       setStep(step + 1);
       return;
     }
-    if (data.loans.some((request) => request.bankId === bankId && request.status !== "Rejected")) return;
+    if (data.loans.some((request) => request.bankId === bankId && request.status !== "Rejected"))
+      return;
     const id = reference("MC");
     const now = new Date().toISOString();
     const ok = await submitAction.run(() =>
       setData((previous) => {
-        if (previous.loans.some((request) => request.bankId === bankId && request.status !== "Rejected")) return previous;
+        if (
+          previous.loans.some(
+            (request) => request.bankId === bankId && request.status !== "Rejected",
+          )
+        )
+          return previous;
         const draftsLeft = { ...previous.loanDrafts };
         delete draftsLeft[bankId];
         return {
@@ -892,7 +1111,10 @@ function Application({
 
   const titles = [
     ["What do you need?", "These are preferences. The bank confirms the final amount and terms."],
-    ["Business and contact", "We've filled this in from your Koko profile. Check the contact details."],
+    [
+      "Business and contact",
+      "We've filled this in from your Koko profile. Check the contact details.",
+    ],
     ["Business finances", "A quick picture of your income and existing borrowing."],
     ["Review and submit", `Check your request before it goes to ${bank}.`],
   ][step];
@@ -901,7 +1123,9 @@ function Application({
     <V1Page>
       <div className="max-w-[720px] space-y-5">
         <div className="space-y-4">
-          <BackLink onClick={() => (step === 0 ? onExit(Boolean(saved)) : setStep(step - 1))}>{step === 0 ? "Merchant credit" : "Back"}</BackLink>
+          <BackLink onClick={() => (step === 0 ? onExit(Boolean(saved)) : setStep(step - 1))}>
+            {step === 0 ? "Merchant credit" : "Back"}
+          </BackLink>
           <div className="flex flex-wrap items-center gap-3">
             <BankLogo bank={bank} />
             <h1 className="text-2xl font-bold tracking-tight">Request merchant credit</h1>
@@ -941,14 +1165,18 @@ function Application({
                   aria-valuetext={lkr(amount || terms.min)}
                   className="h-11 w-full cursor-pointer accent-gray-900"
                 />
-                <div className="flex justify-between text-xs text-muted-foreground" aria-hidden="true">
+                <div
+                  className="flex justify-between text-xs text-muted-foreground"
+                  aria-hidden="true"
+                >
                   <span>{lkr(terms.min)}</span>
                   <span>{lkr(terms.max)}</span>
                 </div>
               </div>
               {eligibility.eligible && amount > eligibility.estimate && amount <= terms.max && (
                 <InlineAlert tone="warning" title="This is more than your estimate">
-                  Based on your Koko sales, {bank} may offer less than {lkr(amount)}. You can still send the request.
+                  Based on your Koko sales, {bank} may offer less than {lkr(amount)}. You can still
+                  send the request.
                 </InlineAlert>
               )}
             </div>
@@ -991,7 +1219,10 @@ function Application({
               }}
               error={shown("mc-term")}
               columns={4}
-              options={terms.terms.map((months) => ({ value: String(months), label: `${months} months` }))}
+              options={terms.terms.map((months) => ({
+                value: String(months),
+                label: `${months} months`,
+              }))}
             />
           </Card>
         )}
@@ -999,8 +1230,19 @@ function Application({
         {step === 1 && (
           <Card className="space-y-5">
             <div className="grid gap-5 sm:grid-cols-2">
-              <TextInput id="mc-business" label="Registered business name" value={BUSINESS.name} locked hint="From your Koko business profile. Update it in Profiles." />
-              <TextInput id="mc-registration" label="Business registration number" value={BUSINESS.registration} locked />
+              <TextInput
+                id="mc-business"
+                label="Registered business name"
+                value={BUSINESS.name}
+                locked
+                hint="From your Koko business profile. Update it in Profiles."
+              />
+              <TextInput
+                id="mc-registration"
+                label="Business registration number"
+                value={BUSINESS.registration}
+                locked
+              />
             </div>
             <TextInput
               id="mc-contact"
@@ -1106,14 +1348,22 @@ function Application({
                 items: [
                   ["Average monthly revenue", lkr(form.revenue)],
                   ["Existing loans or credit", form.borrowing],
-                  ...(form.borrowing === "Yes" ? [["Monthly repayments", lkr(form.repayments)]] : []),
+                  ...(form.borrowing === "Yes"
+                    ? [["Monthly repayments", lkr(form.repayments)]]
+                    : []),
                 ],
               },
             ].map((group) => (
               <Card key={group.title} className="p-4 sm:p-5">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <h3 className="text-[15px] font-semibold">{group.title}</h3>
-                  <Btn variant="tertiary" size="sm" className="-mr-2" aria-label={`Edit, ${group.title.toLowerCase()}`} onClick={() => setStep(group.index)}>
+                  <Btn
+                    variant="tertiary"
+                    size="sm"
+                    className="-mr-2"
+                    aria-label={`Edit, ${group.title.toLowerCase()}`}
+                    onClick={() => setStep(group.index)}
+                  >
                     Edit
                   </Btn>
                 </div>
@@ -1124,15 +1374,29 @@ function Application({
               <h3 id="mc-legal" className="text-[15px] font-semibold">
                 Permissions
               </h3>
-              <Checkbox id="mc-crib" checked={crib} onChange={setCrib} error={attempts[3] ? errors["mc-crib"] : undefined}>
+              <Checkbox
+                id="mc-crib"
+                checked={crib}
+                onChange={setCrib}
+                error={attempts[3] ? errors["mc-crib"] : undefined}
+              >
                 {LEGAL.crib(bank, BUSINESS.name)}
               </Checkbox>
-              <Checkbox id="mc-authorised" checked={authorised} onChange={setAuthorised} error={attempts[3] ? errors["mc-authorised"] : undefined}>
+              <Checkbox
+                id="mc-authorised"
+                checked={authorised}
+                onChange={setAuthorised}
+                error={attempts[3] ? errors["mc-authorised"] : undefined}
+              >
                 {LEGAL.authorised(BUSINESS.name)}
               </Checkbox>
               <p className="text-[14px] text-muted-foreground">
                 By selecting Agree and submit, you agree to {bank}'s{" "}
-                <button type="button" className="font-medium text-foreground underline underline-offset-2" onClick={() => setTermsOpen(true)}>
+                <button
+                  type="button"
+                  className="font-medium text-foreground underline underline-offset-2"
+                  onClick={() => setTermsOpen(true)}
+                >
                   terms and privacy notice
                 </button>
                 . Sending a request doesn't guarantee credit.
@@ -1161,7 +1425,12 @@ function Application({
               "Agree and submit"
             )}
           </Btn>
-          <Btn block variant="tertiary" disabled={submitAction.pending} onClick={() => onExit(Boolean(data.loanDrafts[bankId]))}>
+          <Btn
+            block
+            variant="tertiary"
+            disabled={submitAction.pending}
+            onClick={() => onExit(Boolean(data.loanDrafts[bankId]))}
+          >
             Save and exit
           </Btn>
         </StickyActions>

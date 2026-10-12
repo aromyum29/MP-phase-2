@@ -46,7 +46,7 @@ The archive omits regenerable `node_modules`, build output, tool caches, version
 - `MerchantLoans.tsx`: shared four-step application, request details and simulated lender responses; preserves the original iteration 2 overview. `MerchantCreditOverview.tsx`: iteration 1 Banks / Request history sections, compact six-bank directory and nested request-status tabs.
 - `FinanceData.tsx`: shared finance models, initial mock account, extensible lender array, drafts and request persistence.
 - `FinanceShared.tsx`: shared finance fields, error summaries, panels, statuses and definition lists.
-- `FinanceButton.tsx`: iteration-aware action wrapper. All iteration 1 Finance CTAs use the login primary style (`bg-gray-900`, white text, `hover:bg-gray-800`), including invoice, account-change, upload, draft, review, detail and next-step actions. Disabled actions retain the navy style at reduced opacity. Form controls, navigation tabs and disclosure controls retain their normal control styling. Iteration 2 keeps the original button variants. Account request cards in iteration 1 expose an explicit navy View request action.
+- `FinanceButton.tsx`: iteration-aware action wrapper (now used only by iteration 2 and the original Finance/Financial statement components; see the iteration 1 production pass below). All iteration 1 Finance CTAs use the login primary style (`bg-gray-900`, white text, `hover:bg-gray-800`), including invoice, account-change, upload, draft, review, detail and next-step actions. Disabled actions retain the navy style at reduced opacity. Form controls, navigation tabs and disclosure controls retain their normal control styling. Iteration 2 keeps the original button variants. Account request cards in iteration 1 expose an explicit navy View request action.
 - `BankLogo.tsx`: iteration-aware local logo mapping by bank name. Iteration 1 uses six Figma variants matching account options and the credit bank directory; iteration 2 retains Commercial/Sampath website assets and original layout. Unknown banks fall back to a building icon. An accepted account change updates the logo with the selected bank.
 - `tools/KokoAssets.tsx`: marketing library UI; `tools/koko-assets-data.json`: asset catalogue, dimensions, bytes and download URLs.
 - `src/merchant/components/ui/`: existing reusable UI primitives (Radix-based components).
@@ -122,7 +122,7 @@ References: docs/screenshots/feature-announcement.png (multiple), feature-announ
 - `sessionStorage["koko-finance-demo-v1"]`: shared account/credit requests, account and loan drafts.
 - `sessionStorage["koko-bank-draft-v1"]`: account-change draft.
 - Attachments are File objects kept only in memory; submitted requests retain attachment metadata/filename, not actual file contents.
-- Current page and Finance segment are managed in component state, not separate URL routes.
+- Iteration 2 keeps the current page and Finance segment in component state. Iteration 1 mirrors its page and view state in search params on the single `/` route (see the iteration 1 production pass below).
 
 For clean visual comparisons, use a fresh browser storage context, then select the desired iteration and destination. No backend receives applications, uploaded documents or review decisions. Existing unrelated sections also retain their original prototype behavior; do not infer a production integration merely from a working UI control.
 
@@ -137,6 +137,24 @@ Design research: Stripe dashboard organization on Mobbin provided grouping inspi
 - https://stripe.com/gb/newsroom/information
 - https://www.afterpay.com/en-AU/business/resources/marketing
 
+## Iteration 1 production pass (12 October 2026)
+
+The user approved a UI/UX audit (46 findings, verified against Mobbin references) and asked for all of it except dark-mode tokens and merchant QR posters. Decisions: navy only for the one primary action per view; iteration 1 only; keep the five future banks as "Coming soon" rows; move response simulators into a Demo panel; URL state after the visual fixes; placeholder legal text, lender terms and thresholds are acceptable; add the eligibility card.
+
+Iteration 1 now renders new components from `src/merchant/components/v1/` for these three destinations. The previous components (`BankAccount`, `MerchantLoans`, `MerchantCreditOverview`, `tools/KokoAssets`) are untouched and still render iteration 2.
+
+- `v1/ui.tsx`: shared primitives. Sizes are px because the root font is 14px. Primary/secondary/tertiary/danger buttons (44px on mobile, busy state), fields with borders at 4.8:1 and live validation, searchable combobox, drag-and-drop file field, radio cards, status badges, timeline, labelled step indicator, underline tabs, filter chips, side drawer, pinned mobile action bar, accessible toasts.
+- `.koko-v1` scope in `src/styles.css`: 12px captions, 14px body, `#5F5F70` secondary text. Iteration 1 toasts use dark green/red (`koko-v1-toast`) inside `@layer base` to beat the global toast style.
+- `v1/BankAccountV1.tsx`: status, next payout and Cancel request inside the account card; change history with a drawer; 3-step change (Account details, Review, Verify) with locked holder name, searchable bank/branch, grouped account number with confirm field and helper, drag-and-drop statement, attestation, SMS code (demo code 123456) and a 24-hour payout hold after approval.
+- `v1/MerchantCreditV1.tsx`: eligibility card from Koko sales, lender terms and documents, Coming soon rows with Notify me, Requests tab with Drafts/In review/Accepted/Declined/Cancelled chips, 4-step application (currency input with slider, radio choices, prefilled/locked business details, revenue from Koko sales, CRIB and authority consent, Agree and submit), drafts created on first change only and discardable, drawer with timeline, offer, decline reason, consent record and an external Continue link. New references use `MC-`.
+- `v1/KokoAssetsV1.tsx` and `v1/assets-data.ts`: compact starter kit row, brand colours with copy, keyword search with clear button, one preview per card, Download menu with versions labelled by use (files in `public/koko-assets/variants/`, generated from the originals), usage notes, campaign validity (the Avurudu sample ran 4–12 Apr 2026 and shows as ended with downloads off), preview with previous/next, Brand guidelines dialog.
+- `v1/demo.tsx` and `v1/DemoPanel.tsx`: Version switcher › Demo panel (iteration 1). Simulated bank account approve/decline, credit accept with offer/decline/back to review, Fail the next request, signed-in role (Branch Admin and Cashier are read-only), eligibility scenario, reset.
+- `v1/placeholders.ts`: every placeholder value (lender terms, thresholds, sales history, legal wording, review times, bank directory and branch codes, brand colours, lender link). Replace values there.
+- `v1/url.ts`: iteration 1 search params `page`, `tab`, `status`, `apply`, `step`, `request`, `change`, `category`, `q`, `asset`. Reload, Back/Forward and links restore the view; guards redirect stale steps. Iteration 2 clears them.
+- `FinanceData.tsx`: optional fields only (`requestedBy`, `decidedAt`, `reason`, `offer`, `consent`, `from`, `verifiedAt`, `accountActiveFrom`, `notifyBanks`), `purposeOther` on the loan form, and `cancelledBankRequests` / `cancelledLoans` so iteration 2 never sees a Cancelled status.
+
+Not done, by decision: dark-mode tokens (X14) and merchant-specific QR posters (KA9). Still needed from outside the codebase: real lender terms and thresholds, approved legal wording, vector logo masters (SVG/EPS), the bank and branch directory, and the backend APIs behind the mocked requests.
+
 ## Reproduction acceptance checklist
 
 - Clean installation with the frozen lockfile; production build and TypeScript check succeed.
@@ -147,7 +165,7 @@ Design research: Stripe dashboard organization on Mobbin provided grouping inspi
 - Commercial Bank logo renders in Bank account; Sampath logo renders in Merchant credit.
 - Desktop and mobile views match the supplied source/screenshots without horizontal overflow.
 - Account changes enforce required details/statement; pending keeps current account active; simulated decisions work.
-- Iteration 1 Finance actions use the login navy primary style; Merchant credit has Banks / Request history tabs with status filters in history, and no visible loan wording.
+- Iteration 1 Bank account, Merchant credit and Koko assets match the production pass below: one navy primary action per view, Banks / Requests tabs with status chips, no visible loan wording, Demo panel in the Version switcher. Iteration 2 is unchanged.
 - Credit form reveals steps progressively; draft and review work; Pending/Accepted/Rejected states and dummy continuation work.
 - Library search, category filters, previews, empty state, all six downloads and the four-file ZIP work.
 - No changes to real bank accounts, no live loan submissions and no deployment are implied.

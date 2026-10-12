@@ -35,26 +35,159 @@ export const REVIEW_TIMES = {
 export const NEXT_PAYOUT = { amount: 184250, weekday: 4 }; // LKR, paid every Thursday
 
 // Bank and branch directory. Branch codes are illustrative.
-export type BankEntry = { name: string; accountDigits: number[]; branches: Array<{ name: string; code: string }> };
+export type BankEntry = {
+  name: string;
+  accountDigits: number[];
+  branches: Array<{ name: string; code: string }>;
+};
 const branchList = (names: string[]) =>
   names.map((name, index) => ({ name, code: String(index + 1).padStart(3, "0") }));
 export const BANKS: BankEntry[] = [
-  { name: "Bank of Ceylon", accountDigits: [8, 9], branches: branchList(["Head Office", "Colombo Fort", "Kollupitiya", "Wellawatte", "Nugegoda", "Kandy", "Galle", "Negombo", "Kurunegala", "Jaffna", "Matara"]) },
-  { name: "Commercial Bank", accountDigits: [10], branches: branchList(["Head Office", "Colombo Fort", "Kollupitiya", "Wellawatte", "Nugegoda", "Kandy", "Galle", "Negombo", "Kurunegala", "Jaffna", "Matara"]) },
-  { name: "DFCC Bank", accountDigits: [12], branches: branchList(["Head Office", "Colombo City", "Kollupitiya", "Nugegoda", "Kandy", "Galle", "Negombo", "Kurunegala"]) },
-  { name: "Hatton National Bank", accountDigits: [12], branches: branchList(["Head Office", "City Office", "Kollupitiya", "Wellawatte", "Nugegoda", "Kandy", "Galle", "Negombo", "Kurunegala", "Jaffna"]) },
-  { name: "Nations Trust Bank", accountDigits: [12], branches: branchList(["Head Office", "Kollupitiya", "Wellawatte", "Nugegoda", "Kandy", "Galle", "Negombo"]) },
-  { name: "NDB Bank", accountDigits: [12], branches: branchList(["Head Office", "Kollupitiya", "Nugegoda", "Kandy", "Galle", "Negombo"]) },
-  { name: "People's Bank", accountDigits: [15], branches: branchList(["Head Office", "Colombo Fort", "Kollupitiya", "Wellawatte", "Nugegoda", "Kandy", "Galle", "Negombo", "Kurunegala", "Jaffna", "Matara"]) },
-  { name: "Sampath Bank", accountDigits: [12], branches: branchList(["Head Office", "City Office", "Kollupitiya", "Wellawatte", "Nugegoda", "Kandy", "Galle", "Negombo", "Kurunegala", "Jaffna"]) },
-  { name: "Seylan Bank", accountDigits: [12], branches: branchList(["Head Office", "Kollupitiya", "Wellawatte", "Nugegoda", "Kandy", "Galle", "Negombo"]) },
+  {
+    name: "Bank of Ceylon",
+    accountDigits: [8, 9],
+    branches: branchList([
+      "Head Office",
+      "Colombo Fort",
+      "Kollupitiya",
+      "Wellawatte",
+      "Nugegoda",
+      "Kandy",
+      "Galle",
+      "Negombo",
+      "Kurunegala",
+      "Jaffna",
+      "Matara",
+    ]),
+  },
+  {
+    name: "Commercial Bank",
+    accountDigits: [10],
+    branches: branchList([
+      "Head Office",
+      "Colombo Fort",
+      "Kollupitiya",
+      "Wellawatte",
+      "Nugegoda",
+      "Kandy",
+      "Galle",
+      "Negombo",
+      "Kurunegala",
+      "Jaffna",
+      "Matara",
+    ]),
+  },
+  {
+    name: "DFCC Bank",
+    accountDigits: [12],
+    branches: branchList([
+      "Head Office",
+      "Colombo City",
+      "Kollupitiya",
+      "Nugegoda",
+      "Kandy",
+      "Galle",
+      "Negombo",
+      "Kurunegala",
+    ]),
+  },
+  {
+    name: "Hatton National Bank",
+    accountDigits: [12],
+    branches: branchList([
+      "Head Office",
+      "City Office",
+      "Kollupitiya",
+      "Wellawatte",
+      "Nugegoda",
+      "Kandy",
+      "Galle",
+      "Negombo",
+      "Kurunegala",
+      "Jaffna",
+    ]),
+  },
+  {
+    name: "Nations Trust Bank",
+    accountDigits: [12],
+    branches: branchList([
+      "Head Office",
+      "Kollupitiya",
+      "Wellawatte",
+      "Nugegoda",
+      "Kandy",
+      "Galle",
+      "Negombo",
+    ]),
+  },
+  {
+    name: "NDB Bank",
+    accountDigits: [12],
+    branches: branchList(["Head Office", "Kollupitiya", "Nugegoda", "Kandy", "Galle", "Negombo"]),
+  },
+  {
+    name: "People's Bank",
+    accountDigits: [15],
+    branches: branchList([
+      "Head Office",
+      "Colombo Fort",
+      "Kollupitiya",
+      "Wellawatte",
+      "Nugegoda",
+      "Kandy",
+      "Galle",
+      "Negombo",
+      "Kurunegala",
+      "Jaffna",
+      "Matara",
+    ]),
+  },
+  {
+    name: "Sampath Bank",
+    accountDigits: [12],
+    branches: branchList([
+      "Head Office",
+      "City Office",
+      "Kollupitiya",
+      "Wellawatte",
+      "Nugegoda",
+      "Kandy",
+      "Galle",
+      "Negombo",
+      "Kurunegala",
+      "Jaffna",
+    ]),
+  },
+  {
+    name: "Seylan Bank",
+    accountDigits: [12],
+    branches: branchList([
+      "Head Office",
+      "Kollupitiya",
+      "Wellawatte",
+      "Nugegoda",
+      "Kandy",
+      "Galle",
+      "Negombo",
+    ]),
+  },
 ];
 
 // Merchant credit: lender terms and eligibility rules.
-export const LENDER_TERMS: Record<string, {
-  min: number; max: number; terms: number[]; decision: string; rates: string;
-  minMonths: number; minMonthlySales: number; multiple: number; documents: string[];
-}> = {
+export const LENDER_TERMS: Record<
+  string,
+  {
+    min: number;
+    max: number;
+    terms: number[];
+    decision: string;
+    rates: string;
+    minMonths: number;
+    minMonthlySales: number;
+    multiple: number;
+    documents: string[];
+  }
+> = {
   sampath: {
     min: 250000,
     max: 5000000,
@@ -64,7 +197,11 @@ export const LENDER_TERMS: Record<string, {
     minMonths: 6,
     minMonthlySales: 300000,
     multiple: 4,
-    documents: ["Business registration certificate", "Bank statements for the last 6 months", "NIC of each director"],
+    documents: [
+      "Business registration certificate",
+      "Bank statements for the last 6 months",
+      "NIC of each director",
+    ],
   },
 };
 

@@ -1,4 +1,12 @@
-import { forwardRef, useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 import { Slot } from "@radix-ui/react-slot";
 import {
   AlertCircle,
@@ -23,18 +31,45 @@ import {
 import { toast } from "sonner";
 import { cn } from "../ui/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../ui/command";
-import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../ui/sheet";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "../ui/command";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "../ui/sheet";
 
 // Shared building blocks for the iteration 1 Bank account, Merchant credit and
 // Koko assets pages. Sizes are in px because the portal's root font is 14px,
 // which shrinks every rem-based Tailwind size.
 
-export const lkr = (value: string | number) => `LKR ${Number(value || 0).toLocaleString("en-LK", { maximumFractionDigits: 0 })}`;
+export const lkr = (value: string | number) =>
+  `LKR ${Number(value || 0).toLocaleString("en-LK", { maximumFractionDigits: 0 })}`;
 export const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Colombo" });
+  new Date(iso).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Asia/Colombo",
+  });
 export const fmtDateTime = (iso: string) =>
-  new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Colombo" });
+  new Date(iso).toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "Asia/Colombo",
+  });
 export const addBusinessDays = (iso: string, days: number) => {
   const date = new Date(iso);
   let added = 0;
@@ -45,7 +80,9 @@ export const addBusinessDays = (iso: string, days: number) => {
   return date.toISOString();
 };
 export const fileSize = (bytes: number) =>
-  bytes >= 1000000 ? `${(bytes / 1000000).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1000))} KB`;
+  bytes >= 1000000
+    ? `${(bytes / 1000000).toFixed(1)} MB`
+    : `${Math.max(1, Math.round(bytes / 1000))} KB`;
 
 export const notify = (title: string, description?: string) =>
   toast.success(title, { description, className: "koko-v1-toast" });
@@ -58,12 +95,22 @@ export function V1Page({ children, className }: { children: ReactNode; className
   return <div className={cn("koko-v1 w-full max-w-[1120px] space-y-6", className)}>{children}</div>;
 }
 
-export function PageHeader({ title, description, actions }: { title: string; description?: ReactNode; actions?: ReactNode }) {
+export function PageHeader({
+  title,
+  description,
+  actions,
+}: {
+  title: string;
+  description?: ReactNode;
+  actions?: ReactNode;
+}) {
   return (
     <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0">
         <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-        {description && <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{description}</p>}
+        {description && (
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{description}</p>
+        )}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
     </header>
@@ -72,7 +119,10 @@ export function PageHeader({ title, description, actions }: { title: string; des
 
 export function Card({ children, className, ...props }: ComponentProps<"section">) {
   return (
-    <section className={cn("rounded-2xl border border-border bg-card p-5 sm:p-6", className)} {...props}>
+    <section
+      className={cn("rounded-2xl border border-border bg-card p-5 sm:p-6", className)}
+      {...props}
+    >
       {children}
     </section>
   );
@@ -100,10 +150,27 @@ const btnSizes = {
   sm: "min-h-[44px] px-3 text-[14px] sm:min-h-[32px]",
 };
 export const Btn = forwardRef<HTMLButtonElement, BtnProps>(function Btn(
-  { variant = "primary", size = "md", loading = false, asChild = false, block = false, className, children, disabled, type, ...props },
+  {
+    variant = "primary",
+    size = "md",
+    loading = false,
+    asChild = false,
+    block = false,
+    className,
+    children,
+    disabled,
+    type,
+    ...props
+  },
   ref,
 ) {
-  const classes = cn(btnBase, btnVariants[variant], btnSizes[size], block && "w-full sm:w-auto", className);
+  const classes = cn(
+    btnBase,
+    btnVariants[variant],
+    btnSizes[size],
+    block && "w-full sm:w-auto",
+    className,
+  );
   if (asChild) {
     return (
       <Slot ref={ref} className={classes} {...props}>
@@ -137,7 +204,13 @@ export function BackLink({ onClick, children }: { onClick: () => void; children:
 
 // Mobile: pinned to the bottom with the primary action full width.
 // Desktop: buttons stay inline after the content.
-export function StickyActions({ children, className }: { children: ReactNode; className?: string }) {
+export function StickyActions({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <div
       className={cn(
@@ -151,7 +224,15 @@ export function StickyActions({ children, className }: { children: ReactNode; cl
   );
 }
 
-export function CopyButton({ text, label = "Copy", ariaLabel }: { text: string; label?: string; ariaLabel?: string }) {
+export function CopyButton({
+  text,
+  label = "Copy",
+  ariaLabel,
+}: {
+  text: string;
+  label?: string;
+  ariaLabel?: string;
+}) {
   const [copied, setCopied] = useState(false);
   return (
     <Btn
@@ -177,12 +258,20 @@ export function CopyButton({ text, label = "Copy", ariaLabel }: { text: string; 
 /* ---------- Status and feedback ---------- */
 
 const STATUS: Record<string, { className: string; icon: typeof Clock3; label?: string }> = {
-  Pending: { className: "bg-amber-50 text-amber-900 ring-amber-200", icon: Clock3, label: "In review" },
+  Pending: {
+    className: "bg-amber-50 text-amber-900 ring-amber-200",
+    icon: Clock3,
+    label: "In review",
+  },
   Accepted: { className: "bg-emerald-50 text-emerald-900 ring-emerald-200", icon: CheckCircle2 },
   Approved: { className: "bg-emerald-50 text-emerald-900 ring-emerald-200", icon: CheckCircle2 },
   Active: { className: "bg-emerald-50 text-emerald-900 ring-emerald-200", icon: CheckCircle2 },
   Verified: { className: "bg-emerald-50 text-emerald-900 ring-emerald-200", icon: CheckCircle2 },
-  Rejected: { className: "bg-rose-50 text-rose-900 ring-rose-200", icon: XCircle, label: "Declined" },
+  Rejected: {
+    className: "bg-rose-50 text-rose-900 ring-rose-200",
+    icon: XCircle,
+    label: "Declined",
+  },
   Cancelled: { className: "bg-slate-100 text-slate-800 ring-slate-200", icon: Ban },
   Draft: { className: "bg-slate-100 text-slate-800 ring-slate-200", icon: PencilLine },
   Expired: { className: "bg-slate-100 text-slate-800 ring-slate-200", icon: Clock3 },
@@ -193,7 +282,12 @@ export function StatusBadge({ status, label }: { status: string; label?: string 
   const config = STATUS[status] ?? STATUS.Draft;
   const Icon = config.icon;
   return (
-    <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset", config.className)}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset",
+        config.className,
+      )}
+    >
       <Icon className="h-3.5 w-3.5" aria-hidden="true" />
       {label ?? statusLabel(status)}
     </span>
@@ -223,7 +317,14 @@ export function InlineAlert({
   const config = ALERT[tone];
   const Icon = config.icon;
   return (
-    <div role={tone === "error" ? "alert" : undefined} className={cn("flex flex-wrap gap-3 rounded-xl border p-4 sm:flex-nowrap", config.className, className)}>
+    <div
+      role={tone === "error" ? "alert" : undefined}
+      className={cn(
+        "flex flex-wrap gap-3 rounded-xl border p-4 sm:flex-nowrap",
+        config.className,
+        className,
+      )}
+    >
       <Icon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
       <div className="min-w-0 flex-1 basis-48">
         <p className="text-[14px] font-semibold">{title}</p>
@@ -234,7 +335,13 @@ export function InlineAlert({
   );
 }
 
-export function ErrorSummary({ errors, focusKey }: { errors: Record<string, string>; focusKey: number }) {
+export function ErrorSummary({
+  errors,
+  focusKey,
+}: {
+  errors: Record<string, string>;
+  focusKey: number;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const entries = Object.entries(errors);
   useEffect(() => {
@@ -244,8 +351,17 @@ export function ErrorSummary({ errors, focusKey }: { errors: Record<string, stri
   }, [focusKey]);
   if (!entries.length) return null;
   return (
-    <div ref={ref} tabIndex={-1} role="alert" className="rounded-xl border border-[#b4232f]/40 bg-red-50 p-4 text-red-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b4232f]">
-      <p className="text-[14px] font-semibold">{entries.length === 1 ? "Fix this to continue" : `Fix these ${entries.length} things to continue`}</p>
+    <div
+      ref={ref}
+      tabIndex={-1}
+      role="alert"
+      className="rounded-xl border border-[#b4232f]/40 bg-red-50 p-4 text-red-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b4232f]"
+    >
+      <p className="text-[14px] font-semibold">
+        {entries.length === 1
+          ? "Fix this to continue"
+          : `Fix these ${entries.length} things to continue`}
+      </p>
       <ul className="mt-2 space-y-1 text-[14px]">
         {entries.map(([id, message]) => (
           <li key={id}>
@@ -268,14 +384,29 @@ export function ErrorSummary({ errors, focusKey }: { errors: Record<string, stri
   );
 }
 
-export type TimelineItem = { label: string; date?: string; note?: ReactNode; state: "done" | "current" | "upcoming" | "failed" };
-const TIMELINE_STATE = { done: "completed", current: "in progress", upcoming: "not started", failed: "not completed" };
+export type TimelineItem = {
+  label: string;
+  date?: string;
+  note?: ReactNode;
+  state: "done" | "current" | "upcoming" | "failed";
+};
+const TIMELINE_STATE = {
+  done: "completed",
+  current: "in progress",
+  upcoming: "not started",
+  failed: "not completed",
+};
 export function Timeline({ items }: { items: TimelineItem[] }) {
   return (
     <ol>
       {items.map((item, index) => (
         <li key={`${item.label}-${index}`} className="relative flex gap-3 pb-5 last:pb-0">
-          {index < items.length - 1 && <span className="absolute left-[11px] top-7 bottom-1 w-px bg-border" aria-hidden="true" />}
+          {index < items.length - 1 && (
+            <span
+              className="absolute left-[11px] top-7 bottom-1 w-px bg-border"
+              aria-hidden="true"
+            />
+          )}
           <span
             aria-hidden="true"
             className={cn(
@@ -291,7 +422,12 @@ export function Timeline({ items }: { items: TimelineItem[] }) {
             {item.state === "current" && <span className="h-2 w-2 rounded-full bg-gray-900" />}
           </span>
           <div className="min-w-0">
-            <p className={cn("text-[14px] font-medium", item.state === "upcoming" && "text-muted-foreground")}>
+            <p
+              className={cn(
+                "text-[14px] font-medium",
+                item.state === "upcoming" && "text-muted-foreground",
+              )}
+            >
               {item.label}
               <span className="sr-only">, {TIMELINE_STATE[item.state]}</span>
             </p>
@@ -304,7 +440,13 @@ export function Timeline({ items }: { items: TimelineItem[] }) {
   );
 }
 
-export function DefinitionList({ items, columns = 2 }: { items: Array<[string, ReactNode]>; columns?: 1 | 2 }) {
+export function DefinitionList({
+  items,
+  columns = 2,
+}: {
+  items: Array<[string, ReactNode]>;
+  columns?: 1 | 2;
+}) {
   return (
     <dl className={cn("grid gap-x-8 gap-y-4", columns === 2 && "sm:grid-cols-2")}>
       {items.map(([label, value]) => (
@@ -352,7 +494,12 @@ export function UnderlineTabs({
             tabIndex={active ? 0 : -1}
             onClick={() => onChange(item.value)}
             onKeyDown={(event) => {
-              const keys: Record<string, number> = { ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: items.length - 1 };
+              const keys: Record<string, number> = {
+                ArrowRight: index + 1,
+                ArrowLeft: index - 1,
+                Home: 0,
+                End: items.length - 1,
+              };
               if (event.key in keys) {
                 event.preventDefault();
                 move(keys[event.key]);
@@ -360,12 +507,16 @@ export function UnderlineTabs({
             }}
             className={cn(
               "-mb-px inline-flex min-h-[44px] items-center gap-2 rounded-t-sm border-b-2 pb-2 pt-1 text-[15px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900",
-              active ? "border-gray-900 text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
+              active
+                ? "border-gray-900 text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground",
             )}
           >
             {item.label}
             {item.count !== undefined && (
-              <span className="rounded-full bg-[#ececf0] px-2 py-0.5 text-xs tabular-nums text-foreground">{item.count}</span>
+              <span className="rounded-full bg-[#ececf0] px-2 py-0.5 text-xs tabular-nums text-foreground">
+                {item.count}
+              </span>
             )}
           </button>
         );
@@ -396,12 +547,23 @@ export function FilterChips({
             aria-pressed={active}
             onClick={() => onChange(item.value)}
             className={cn(
-              "inline-flex min-h-[40px] items-center gap-2 rounded-full border px-3.5 text-[14px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 sm:min-h-[34px]",
-              active ? "border-gray-900 bg-gray-900 text-white" : "border-[#6B7280] bg-white text-foreground hover:bg-gray-50",
+              "inline-flex min-h-[44px] items-center gap-2 rounded-full border px-3.5 text-[14px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 sm:min-h-[34px]",
+              active
+                ? "border-gray-900 bg-gray-900 text-white"
+                : "border-[#6B7280] bg-white text-foreground hover:bg-gray-50",
             )}
           >
             {item.label}
-            {item.count !== undefined && <span className={cn("text-xs tabular-nums", active ? "text-white/80" : "text-muted-foreground")}>{item.count}</span>}
+            {item.count !== undefined && (
+              <span
+                className={cn(
+                  "text-xs tabular-nums",
+                  active ? "text-white/80" : "text-muted-foreground",
+                )}
+              >
+                {item.count}
+              </span>
+            )}
           </button>
         );
       })}
@@ -417,13 +579,18 @@ export const describedBy = (id: string, { hint, error }: { hint?: ReactNode; err
 const fieldClass = (error?: string) =>
   cn(
     "h-11 w-full rounded-lg border bg-white px-3 text-[16px] text-foreground transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-2 sm:h-10 sm:text-[14px]",
-    error ? "border-[#b4232f] focus:ring-[#b4232f]/25" : "border-[#6B7280] hover:border-gray-700 focus:border-gray-900 focus:ring-gray-900/15",
+    error
+      ? "border-[#b4232f] focus:ring-[#b4232f]/25"
+      : "border-[#6B7280] hover:border-gray-700 focus:border-gray-900 focus:ring-gray-900/15",
   );
 
 export function FieldError({ id, error }: { id: string; error?: string }) {
   if (!error) return null;
   return (
-    <p id={`${id}-error`} className="flex items-start gap-1.5 text-[13px] font-medium text-[#b4232f]">
+    <p
+      id={`${id}-error`}
+      className="flex items-start gap-1.5 text-[13px] font-medium text-[#b4232f]"
+    >
       <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
       {error}
     </p>
@@ -485,7 +652,10 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
     <FieldShell id={id} label={label} hint={hint} error={error} optional={optional} aside={aside}>
       <div className="relative">
         {prefix && (
-          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-[14px] font-medium text-muted-foreground" aria-hidden="true">
+          <span
+            className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-[14px] font-medium text-muted-foreground"
+            aria-hidden="true"
+          >
             {prefix}
           </span>
         )}
@@ -495,10 +665,20 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
           readOnly={locked || input.readOnly}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy(id, { hint, error })}
-          className={cn(fieldClass(error), prefix && "pl-12", locked && "cursor-default border-dashed bg-[#f6f6f8] pr-10", className)}
+          className={cn(
+            fieldClass(error),
+            prefix && "pl-12",
+            locked && "cursor-default border-dashed bg-[#f6f6f8] pr-10",
+            className,
+          )}
           {...input}
         />
-        {locked && <Lock className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-label="Locked" />}
+        {locked && (
+          <Lock
+            className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-label="Locked"
+          />
+        )}
       </div>
     </FieldShell>
   );
@@ -508,7 +688,10 @@ export function CurrencyInput({
   value,
   onChange,
   ...props
-}: Omit<TextInputProps, "value" | "onChange" | "prefix"> & { value: string; onChange: (digits: string) => void }) {
+}: Omit<TextInputProps, "value" | "onChange" | "prefix"> & {
+  value: string;
+  onChange: (digits: string) => void;
+}) {
   const display = value ? Number(value).toLocaleString("en-LK") : "";
   return (
     <TextInput
@@ -517,7 +700,14 @@ export function CurrencyInput({
       inputMode="numeric"
       autoComplete="off"
       value={display}
-      onChange={(event) => onChange(event.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 12))}
+      onChange={(event) =>
+        onChange(
+          event.target.value
+            .replace(/\D/g, "")
+            .replace(/^0+(?=\d)/, "")
+            .slice(0, 12),
+        )
+      }
     />
   );
 }
@@ -552,7 +742,11 @@ export function SelectInput({
           onChange={(event) => onChange(event.target.value)}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy(id, { hint, error })}
-          className={cn(fieldClass(error), "appearance-none pr-10", !value && "text-muted-foreground")}
+          className={cn(
+            fieldClass(error),
+            "appearance-none pr-10",
+            !value && "text-muted-foreground",
+          )}
         >
           <option value="">{placeholder}</option>
           {options.map((option) => (
@@ -561,7 +755,10 @@ export function SelectInput({
             </option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground" aria-hidden="true" />
+        <ChevronDown
+          className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground"
+          aria-hidden="true"
+        />
       </div>
     </FieldShell>
   );
@@ -586,7 +783,12 @@ export function RadioCards({
   onChange: (value: string) => void;
   columns?: 2 | 3 | 4 | 5;
 }) {
-  const grid = { 2: "grid-cols-2", 3: "grid-cols-1 sm:grid-cols-3", 4: "grid-cols-2 sm:grid-cols-4", 5: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" }[columns];
+  const grid = {
+    2: "grid-cols-2",
+    3: "grid-cols-1 sm:grid-cols-3",
+    4: "grid-cols-2 sm:grid-cols-4",
+    5: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5",
+  }[columns];
   return (
     <fieldset className="min-w-0 space-y-1.5">
       <legend className="text-[14px] font-medium text-foreground">{legend}</legend>
@@ -603,7 +805,11 @@ export function RadioCards({
               key={option.value}
               className={cn(
                 "flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border bg-white px-3 py-2 text-[14px] transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-gray-900 has-[:focus-visible]:ring-offset-1",
-                checked ? "border-gray-900 bg-gray-50 font-medium shadow-[inset_0_0_0_1px_rgb(17,24,39)]" : error ? "border-[#b4232f]" : "border-[#6B7280] hover:border-gray-700",
+                checked
+                  ? "border-gray-900 bg-gray-50 font-medium shadow-[inset_0_0_0_1px_rgb(17,24,39)]"
+                  : error
+                    ? "border-[#b4232f]"
+                    : "border-[#6B7280] hover:border-gray-700",
               )}
             >
               <input
@@ -619,7 +825,11 @@ export function RadioCards({
               />
               <span className="min-w-0">
                 {option.label}
-                {option.description && <span className="block text-xs font-normal text-muted-foreground">{option.description}</span>}
+                {option.description && (
+                  <span className="block text-xs font-normal text-muted-foreground">
+                    {option.description}
+                  </span>
+                )}
               </span>
             </label>
           );
@@ -670,16 +880,25 @@ export function Combobox({
             aria-invalid={error ? true : undefined}
             aria-describedby={describedBy(id, { hint, error })}
             disabled={disabled}
-            className={cn(fieldClass(error), "flex items-center justify-between gap-2 text-left disabled:cursor-not-allowed disabled:bg-[#f6f6f8]", !selected && "text-muted-foreground")}
+            className={cn(
+              fieldClass(error),
+              "flex items-center justify-between gap-2 text-left disabled:cursor-not-allowed disabled:bg-[#f6f6f8]",
+              !selected && "text-muted-foreground",
+            )}
           >
             <span className="truncate">
               {selected ? selected.label : placeholder}
-              {selected?.meta && <span className="ml-2 text-xs text-muted-foreground">{selected.meta}</span>}
+              {selected?.meta && (
+                <span className="ml-2 text-xs text-muted-foreground">{selected.meta}</span>
+              )}
             </span>
             <ChevronDown className="h-4 w-4 shrink-0 text-foreground" aria-hidden="true" />
           </button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="koko-v1 w-(--radix-popover-trigger-width) min-w-[260px] p-0">
+        <PopoverContent
+          align="start"
+          className="koko-v1 w-(--radix-popover-trigger-width) min-w-[260px] p-0"
+        >
           <Command>
             <CommandInput placeholder={searchPlaceholder} className="text-[16px] sm:text-[14px]" />
             <CommandList>
@@ -693,11 +912,19 @@ export function Combobox({
                       onChange(option.value);
                       setOpen(false);
                     }}
-                    className="min-h-[40px] text-[14px]"
+                    className="min-h-[44px] text-[14px] sm:min-h-[40px]"
                   >
-                    <Check className={cn("h-4 w-4", option.value === value ? "opacity-100" : "opacity-0")} aria-hidden="true" />
+                    <Check
+                      className={cn(
+                        "h-4 w-4",
+                        option.value === value ? "opacity-100" : "opacity-0",
+                      )}
+                      aria-hidden="true"
+                    />
                     <span className="flex-1">{option.label}</span>
-                    {option.meta && <span className="text-xs text-muted-foreground">{option.meta}</span>}
+                    {option.meta && (
+                      <span className="text-xs text-muted-foreground">{option.meta}</span>
+                    )}
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -709,7 +936,11 @@ export function Combobox({
   );
 }
 
-const FILE_TYPES: Record<string, string> = { "application/pdf": "PDF", "image/jpeg": "JPG", "image/png": "PNG" };
+const FILE_TYPES: Record<string, string> = {
+  "application/pdf": "PDF",
+  "image/jpeg": "JPG",
+  "image/png": "PNG",
+};
 export function FileDrop({
   id,
   label,
@@ -734,16 +965,23 @@ export function FileDrop({
   const [over, setOver] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const url = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
-  useEffect(() => () => {
-    if (url) URL.revokeObjectURL(url);
-  }, [url]);
+  useEffect(
+    () => () => {
+      if (url) URL.revokeObjectURL(url);
+    },
+    [url],
+  );
   const take = (candidate?: File) => {
     if (!candidate) return;
     const extension = candidate.name.split(".").pop()?.toLowerCase() ?? "";
     const allowed = FILE_TYPES[candidate.type] || ["pdf", "jpg", "jpeg", "png"].includes(extension);
     if (!allowed) return onReject("Choose a PDF, JPG or PNG file.");
-    if (!candidate.size) return onReject("That file is empty. Choose another copy of the statement.");
-    if (candidate.size > maxBytes) return onReject(`That file is ${fileSize(candidate.size)}. Choose a file under ${fileSize(maxBytes)}.`);
+    if (!candidate.size)
+      return onReject("That file is empty. Choose another copy of the statement.");
+    if (candidate.size > maxBytes)
+      return onReject(
+        `That file is ${fileSize(candidate.size)}. Choose a file under ${fileSize(maxBytes)}.`,
+      );
     onFile(candidate);
   };
   return (
@@ -772,13 +1010,17 @@ export function FileDrop({
       />
       {file ? (
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#6B7280] bg-white p-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#f1f1f4]" aria-hidden="true">
+          <span
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#f1f1f4]"
+            aria-hidden="true"
+          >
             <FileText className="h-5 w-5" />
           </span>
           <div className="min-w-0 flex-1 basis-40">
             <p className="truncate text-[14px] font-medium">{file.name}</p>
             <p className="text-xs text-muted-foreground">
-              {FILE_TYPES[file.type] ?? file.name.split(".").pop()?.toUpperCase()} · {fileSize(file.size)} · Attached
+              {FILE_TYPES[file.type] ?? file.name.split(".").pop()?.toUpperCase()} ·{" "}
+              {fileSize(file.size)} · Attached
             </p>
           </div>
           <div className="flex flex-wrap gap-1">
@@ -813,15 +1055,25 @@ export function FileDrop({
           }}
           className={cn(
             "flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed px-4 py-7 text-center transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-gray-900 peer-focus-visible:ring-offset-2",
-            over ? "border-gray-900 bg-gray-50" : error ? "border-[#b4232f] bg-red-50/40" : "border-[#6B7280] bg-[#fafafb] hover:bg-gray-50",
+            over
+              ? "border-gray-900 bg-gray-50"
+              : error
+                ? "border-[#b4232f] bg-red-50/40"
+                : "border-[#6B7280] bg-[#fafafb] hover:bg-gray-50",
           )}
         >
           <UploadCloud className="mb-1 h-6 w-6 text-muted-foreground" aria-hidden="true" />
           <span className="text-[14px]">
-            <span className="hidden sm:inline">{over ? "Drop the file to attach it" : "Drag a file here or "}</span>
-            {!over && <span className="font-semibold underline underline-offset-2">Choose a file</span>}
+            <span className="hidden sm:inline">
+              {over ? "Drop the file to attach it" : "Drag a file here or "}
+            </span>
+            {!over && (
+              <span className="font-semibold underline underline-offset-2">Choose a file</span>
+            )}
           </span>
-          <span className="text-xs text-muted-foreground">PDF, JPG or PNG · up to {fileSize(maxBytes)}</span>
+          <span className="text-xs text-muted-foreground">
+            PDF, JPG or PNG · up to {fileSize(maxBytes)}
+          </span>
         </label>
       )}
       <FieldError id={id} error={error} />
@@ -886,11 +1138,18 @@ export function Drawer({
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="koko-v1 w-full gap-0 p-0 sm:max-w-[560px] [&>button:last-child]:hidden">
+      <SheetContent
+        side="right"
+        className="koko-v1 w-full gap-0 p-0 sm:max-w-[560px] [&>button:last-child]:hidden"
+      >
         <SheetHeader className="flex-row items-start justify-between gap-3 border-b border-border px-5 py-4 sm:px-6">
           <div className="min-w-0 space-y-1">
             <SheetTitle className="text-lg font-semibold">{title}</SheetTitle>
-            {description && <SheetDescription className="text-[14px] text-muted-foreground">{description}</SheetDescription>}
+            {description && (
+              <SheetDescription className="text-[14px] text-muted-foreground">
+                {description}
+              </SheetDescription>
+            )}
           </div>
           <SheetClose asChild>
             <Btn variant="tertiary" size="sm" className="-mr-2 -mt-1 w-11 px-0" aria-label="Close">
@@ -898,15 +1157,31 @@ export function Drawer({
             </Btn>
           </SheetClose>
         </SheetHeader>
-        <div role="region" aria-label="Details" tabIndex={0} className="min-h-0 flex-1 overflow-y-auto px-5 py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900 sm:px-6">{children}</div>
-        {footer && <div className="border-t border-border px-5 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6">{footer}</div>}
+        <div
+          role="region"
+          aria-label="Details"
+          tabIndex={0}
+          className="min-h-0 flex-1 overflow-y-auto px-5 py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900 sm:px-6"
+        >
+          {children}
+        </div>
+        {footer && (
+          <div className="border-t border-border px-5 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6">
+            {footer}
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );
 }
 
 export function SkeletonBlock({ className }: { className?: string }) {
-  return <div className={cn("rounded-lg bg-[#ececf0] motion-safe:animate-pulse", className)} aria-hidden="true" />;
+  return (
+    <div
+      className={cn("rounded-lg bg-[#ececf0] motion-safe:animate-pulse", className)}
+      aria-hidden="true"
+    />
+  );
 }
 
 /* ---------- Steps ---------- */
@@ -930,7 +1205,13 @@ export function StepIndicator({
       </p>
       <div className="mt-2 flex gap-1.5 sm:hidden" aria-hidden="true">
         {steps.map((step, index) => (
-          <span key={step} className={cn("h-1 flex-1 rounded-full", index <= current ? "bg-gray-900" : "bg-[#d9d9e0]")} />
+          <span
+            key={step}
+            className={cn(
+              "h-1 flex-1 rounded-full",
+              index <= current ? "bg-gray-900" : "bg-[#d9d9e0]",
+            )}
+          />
         ))}
       </div>
       <ol className="hidden gap-2 sm:flex">
@@ -941,26 +1222,50 @@ export function StepIndicator({
               <span
                 className={cn(
                   "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-                  done ? "bg-gray-900 text-white" : index === current ? "border-2 border-gray-900 text-gray-900" : "border border-[#9a9aa6] text-muted-foreground",
+                  done
+                    ? "bg-gray-900 text-white"
+                    : index === current
+                      ? "border-2 border-gray-900 text-gray-900"
+                      : "border border-[#9a9aa6] text-muted-foreground",
                 )}
                 aria-hidden="true"
               >
                 {done ? <Check className="h-3.5 w-3.5" /> : index + 1}
               </span>
-              <span className={cn("text-[14px]", index === current ? "font-semibold text-foreground" : done ? "text-foreground" : "text-muted-foreground")}>
+              <span
+                className={cn(
+                  "text-[14px]",
+                  index === current
+                    ? "font-semibold text-foreground"
+                    : done
+                      ? "text-foreground"
+                      : "text-muted-foreground",
+                )}
+              >
                 {step}
                 {done && <span className="sr-only"> (completed)</span>}
               </span>
             </>
           );
           return (
-            <li key={step} className="flex min-w-0 flex-1 items-center gap-2 border-t-2 pt-2.5" style={{ borderColor: index <= current ? "#111827" : "#d9d9e0" }}>
+            <li
+              key={step}
+              className="flex min-w-0 flex-1 items-center gap-2 border-t-2 pt-2.5"
+              style={{ borderColor: index <= current ? "#111827" : "#d9d9e0" }}
+            >
               {done && onStep ? (
-                <button type="button" onClick={() => onStep(index)} className="flex items-center gap-2 rounded-md text-left underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900">
+                <button
+                  type="button"
+                  onClick={() => onStep(index)}
+                  className="flex items-center gap-2 rounded-md text-left underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
+                >
                   {body}
                 </button>
               ) : (
-                <span className="flex items-center gap-2" aria-current={index === current ? "step" : undefined}>
+                <span
+                  className="flex items-center gap-2"
+                  aria-current={index === current ? "step" : undefined}
+                >
                   {body}
                 </span>
               )}

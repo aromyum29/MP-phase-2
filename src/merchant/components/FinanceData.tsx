@@ -14,7 +14,7 @@ export type LoanForm = {
   borrowing: string;
   repayments: string;
   // Iteration 1 only: free-text purpose when "Other" is chosen.
-  purposeOther?: string;
+  purposeOther: string;
 };
 export type LoanStatus = "Pending" | "Accepted" | "Rejected";
 // Optional fields below are written by iteration 1 only; iteration 2 ignores them.
@@ -65,6 +65,7 @@ export const emptyLoan: LoanForm = {
   revenue: "",
   borrowing: "",
   repayments: "",
+  purposeOther: "",
 };
 export const lenders = [
   {

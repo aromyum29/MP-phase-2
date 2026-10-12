@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { FINANCE_ROLES, type DemoRole } from "./placeholders";
 
 // Iteration 1 demo controls. Stand-ins for what a real backend would decide:
@@ -40,7 +48,10 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       /* Settings stay in memory. */
     }
   }, [settings]);
-  const update = useCallback((patch: Partial<Settings>) => setSettings((previous) => ({ ...previous, ...patch })), []);
+  const update = useCallback(
+    (patch: Partial<Settings>) => setSettings((previous) => ({ ...previous, ...patch })),
+    [],
+  );
   const consumeFailure = useCallback(() => {
     if (!failNext.current) return false;
     failNext.current = false;
@@ -65,7 +76,8 @@ export function useCanManageFinance() {
   return (FINANCE_ROLES as readonly string[]).includes(settings.role);
 }
 
-export const NETWORK_ERROR = "We couldn't reach Koko, so nothing was sent. Check your connection and try again. Your details are still here.";
+export const NETWORK_ERROR =
+  "We couldn't reach Koko, so nothing was sent. Check your connection and try again. Your details are still here.";
 
 // Simulated request: a short delay, then success or a recoverable failure.
 export function useAction() {
