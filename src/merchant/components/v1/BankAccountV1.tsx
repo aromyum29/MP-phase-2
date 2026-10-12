@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { ArrowDown, ArrowRight, CheckCircle2, ChevronRight, Lock } from "lucide-react";
 import { BankLogo } from "../BankLogo";
+import { cn } from "../ui/utils";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "../ui/input-otp";
 import {
   reference,
@@ -22,7 +23,6 @@ import {
 import {
   BackLink,
   Btn,
-  Card,
   Checkbox,
   Combobox,
   DefinitionList,
@@ -32,12 +32,10 @@ import {
   FileDrop,
   InlineAlert,
   PageHeader,
-  PillAction,
   SkeletonBlock,
+  SoftFields,
   StatusBadge,
   StatusBar,
-  StepIndicator,
-  StickyActions,
   TextInput,
   Timeline,
   V1Page,
@@ -72,6 +70,49 @@ const nextPayout = () => {
   });
 };
 
+// Card and type styles shared with the Create Order form.
+const cardShell = "rounded-2xl border border-[#BDDCEE]/50 bg-white shadow-xl";
+const labelClass = "text-xs font-medium uppercase tracking-wider text-muted-foreground";
+const valueClass = "mt-1 text-base font-semibold text-gray-900";
+const primaryClass =
+  "w-full shadow-md hover:shadow-lg motion-safe:hover:-translate-y-px motion-safe:active:translate-y-0";
+const secondaryClass = "w-full text-sm text-gray-700";
+
+function CardAction({
+  tone = "secondary",
+  chevron = false,
+  className,
+  children,
+  ...props
+}: ComponentProps<"button"> & { tone?: "primary" | "secondary" | "danger"; chevron?: boolean }) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        "flex min-h-[44px] w-full items-center gap-3 rounded-lg px-4 text-left text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 sm:h-12 sm:min-h-0",
+        tone === "primary"
+          ? "justify-center bg-gray-900 font-semibold tracking-wide text-white shadow-md hover:bg-gray-800 hover:shadow-lg"
+          : "justify-between border bg-white font-medium hover:bg-gray-50",
+        tone === "secondary" && "border-gray-300 text-gray-800 hover:border-gray-400",
+        tone === "danger" && "border-[#e3b4b9] text-[#b4232f] hover:bg-red-50",
+        className,
+      )}
+      {...props}
+    >
+      <span className="min-w-0">{children}</span>
+      {chevron && <ChevronRight className="h-4 w-4 shrink-0 text-gray-500" aria-hidden="true" />}
+    </button>
+  );
+}
+
+function FlowActions({ children }: { children: ReactNode }) {
+  return <div className="flex flex-col gap-2 pt-8">{children}</div>;
+}
+
+// A reload starts the page fresh: the open change flow and drawer are dismissed
+// along with the data (see FinanceDataProvider).
+let freshLoad = true;
+
 export function BankAccountV1() {
   const { data, setData, bankDraft, setBankDraft, statement, setStatement } = useFinanceData();
   const canManage = useCanManageFinance();
@@ -84,6 +125,13 @@ export function BankAccountV1() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const firstRender = useRef(true);
+  useEffect(() => {
+    if (!freshLoad) return;
+    freshLoad = false;
+    if (view !== "overview" || openId)
+      setSearch({ change: null, request: null }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     if (firstRender.current) {
       firstRender.current = false;
@@ -262,24 +310,24 @@ export function BankAccountV1() {
   /* ---------- Views ---------- */
   if (loading) {
     return (
-      <V1Page>
+      <V1Page className="koko-portal-type">
         <PageHeader title="Bank account" description="Where your Koko payouts are sent." />
         <div
-          className="max-w-[920px] space-y-4 rounded-[20px] border border-border bg-card p-4 sm:p-5"
+          className={cn(cardShell, "max-w-[920px] space-y-5 p-5 sm:p-8")}
           aria-busy="true"
           aria-label="Loading payout account"
         >
-          <SkeletonBlock className="h-10" />
-          <div className="grid grid-cols-[80px_minmax(0,1fr)] gap-4 sm:grid-cols-[112px_minmax(0,1fr)] lg:grid-cols-[128px_minmax(0,1fr)_272px]">
-            <SkeletonBlock className="aspect-square w-full rounded-2xl" />
+          <SkeletonBlock className="h-10 rounded-xl" />
+          <div className="grid grid-cols-[80px_minmax(0,1fr)] gap-4 sm:grid-cols-[112px_minmax(0,1fr)] sm:gap-x-6 lg:grid-cols-[128px_minmax(0,1fr)_272px]">
+            <SkeletonBlock className="aspect-square w-full rounded-xl" />
             <div className="space-y-3 self-center">
               <SkeletonBlock className="h-6 w-56" />
               <SkeletonBlock className="h-4 w-40" />
               <SkeletonBlock className="h-10 w-48" />
             </div>
             <div className="col-span-2 space-y-2.5 lg:col-span-1">
-              <SkeletonBlock className="h-11 rounded-full" />
-              <SkeletonBlock className="h-11 rounded-full" />
+              <SkeletonBlock className="h-12" />
+              <SkeletonBlock className="h-12" />
             </div>
           </div>
         </div>
@@ -288,8 +336,50 @@ export function BankAccountV1() {
   }
 
   const stepIndex = STEP_VIEWS.indexOf(view);
-  const flowHeader = (title: string, subtitle: string) => (
-    <div className="space-y-4">
+  // Header and progress inside the flow card, laid out like Create Order.
+  const flowTop = (title: string, subtitle: string) => (
+    <>
+      <div className="mb-8 space-y-2 text-center">
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Change payout account</h1>
+        <p className="text-sm text-muted-foreground">{subtitle}</p>
+      </div>
+      <div className="mb-8">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2
+            ref={heading}
+            tabIndex={-1}
+            className="text-sm font-semibold text-gray-900 outline-none"
+          >
+            {title}
+          </h2>
+          <p className="shrink-0 text-xs text-muted-foreground">
+            Step {stepIndex + 1} of {STEPS.length}
+          </p>
+        </div>
+        <nav aria-label="Progress">
+          <ol className="mt-2.5 flex gap-1.5">
+            {STEPS.map((step, index) => (
+              <li
+                key={step}
+                aria-current={index === stepIndex ? "step" : undefined}
+                className={cn(
+                  "h-1 flex-1 rounded-full",
+                  index <= stepIndex ? "bg-gray-900" : "bg-[#e4e4ea]",
+                )}
+              >
+                <span className="sr-only">
+                  {step}
+                  {index < stepIndex ? " (completed)" : ""}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </nav>
+      </div>
+    </>
+  );
+  const flowShell = (children: ReactNode) => (
+    <div className="mx-auto w-full max-w-3xl space-y-3">
       <BackLink
         onClick={() =>
           view === "details" ? setView("overview") : setView(STEP_VIEWS[stepIndex - 1])
@@ -297,43 +387,38 @@ export function BankAccountV1() {
       >
         {view === "details" ? "Bank account" : "Back"}
       </BackLink>
-      <h1 className="text-2xl font-bold tracking-tight">Change payout account</h1>
-      <StepIndicator
-        steps={STEPS}
-        current={stepIndex}
-        onStep={(index) => setView(STEP_VIEWS[index])}
-      />
-      <div>
-        <h2 ref={heading} tabIndex={-1} className="text-xl font-semibold outline-none">
-          {title}
-        </h2>
-        <p className="mt-1 text-[14px] text-muted-foreground">{subtitle}</p>
+      <div className={cn(cardShell, "px-5 py-8 sm:px-12 sm:py-10")}>
+        <SoftFields>{children}</SoftFields>
       </div>
     </div>
   );
 
   return (
-    <V1Page>
+    <V1Page className="koko-portal-type">
       {view === "overview" && (
         <>
           <PageHeader title="Bank account" description="Where your Koko payouts are sent." />
           <section
             aria-labelledby="payout-heading"
-            className="max-w-[920px] rounded-[20px] border border-border bg-card p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_rgba(16,24,40,0.06)] sm:p-5"
+            className={cn(cardShell, "max-w-[920px] p-5 sm:p-8")}
           >
             {pending ? (
-              <StatusBar tone="pending">
+              <StatusBar tone="pending" className="text-sm">
                 Change in review · Expected by {fmtDate(addBusinessDays(pending.date, reviewDays))}
               </StatusBar>
             ) : activeFrom ? (
-              <StatusBar tone="info">Approved · Payouts start {fmtDateTime(activeFrom)}</StatusBar>
+              <StatusBar tone="info" className="text-sm">
+                Approved · Payouts start {fmtDateTime(activeFrom)}
+              </StatusBar>
             ) : (
-              <StatusBar tone="active">Active</StatusBar>
+              <StatusBar tone="active" className="text-sm">
+                Active
+              </StatusBar>
             )}
 
-            <div className="mt-4 grid grid-cols-[80px_minmax(0,1fr)] gap-x-4 gap-y-5 sm:grid-cols-[112px_minmax(0,1fr)] sm:gap-x-6 lg:grid-cols-[128px_minmax(0,1fr)_272px]">
+            <div className="mt-6 grid grid-cols-[80px_minmax(0,1fr)] gap-x-4 gap-y-6 sm:grid-cols-[112px_minmax(0,1fr)] sm:gap-x-6 lg:grid-cols-[128px_minmax(0,1fr)_272px]">
               <div
-                className="flex aspect-square w-full items-center justify-center rounded-2xl bg-[#f4f4f6]"
+                className="flex aspect-square w-full items-center justify-center rounded-xl bg-[#f3f3f5]"
                 aria-hidden="true"
               >
                 <div className="scale-125 sm:scale-150">
@@ -341,54 +426,54 @@ export function BankAccountV1() {
                 </div>
               </div>
 
-              <div className="min-w-0 space-y-4 self-center">
-                <div>
+              <div className="min-w-0 space-y-5 self-center">
+                <div className="space-y-1">
                   <h2
                     id="payout-heading"
                     ref={heading}
                     tabIndex={-1}
-                    className="text-[18px] font-medium leading-snug outline-none"
+                    className="text-xl leading-snug tracking-tight text-gray-900 outline-none"
                   >
                     <span className="sr-only">Payout account: </span>
                     {data.account.bank}{" "}
                     <span className="whitespace-nowrap">{mask(data.account.number)}</span>
                   </h2>
-                  <p className="mt-1 text-[14px] text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     {data.account.holder} · {data.account.branch} branch
                   </p>
                 </div>
                 <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                   <div>
-                    <dt className="text-[14px] text-muted-foreground">Next payout</dt>
-                    <dd className="mt-0.5 text-[17px]">
+                    <dt className={labelClass}>Next payout</dt>
+                    <dd className={valueClass}>
                       <span className="tabular-nums">{lkr(NEXT_PAYOUT.amount)}</span>{" "}
-                      <span className="whitespace-nowrap">on {nextPayout()}</span>
+                      <span className="whitespace-nowrap font-normal text-gray-700">
+                        on {nextPayout()}
+                      </span>
                     </dd>
                   </div>
                   {pending ? (
                     <div>
-                      <dt className="text-[14px] text-muted-foreground">Requested change</dt>
-                      <dd className="mt-0.5 text-[17px]">{accountLabel(pending.account)}</dd>
+                      <dt className={labelClass}>Requested change</dt>
+                      <dd className={valueClass}>{accountLabel(pending.account)}</dd>
                     </div>
                   ) : activeFrom ? (
                     <div>
-                      <dt className="text-[14px] text-muted-foreground">
-                        Payouts to this account start
-                      </dt>
-                      <dd className="mt-0.5 text-[17px]">{fmtDateTime(activeFrom)}</dd>
+                      <dt className={labelClass}>Payouts to this account start</dt>
+                      <dd className={valueClass}>{fmtDateTime(activeFrom)}</dd>
                     </div>
                   ) : null}
                 </dl>
               </div>
 
-              <div className="col-span-2 space-y-2.5 sm:col-span-2 lg:col-span-1">
+              <div className="col-span-2 space-y-2.5 lg:col-span-1">
                 {pending ? (
                   <>
-                    <PillAction chevron onClick={() => setOpenId(pending.id)}>
+                    <CardAction chevron onClick={() => setOpenId(pending.id)}>
                       View request
-                    </PillAction>
+                    </CardAction>
                     {canManage && (
-                      <PillAction
+                      <CardAction
                         tone="danger"
                         onClick={() => {
                           setConfirmCancel(true);
@@ -396,17 +481,17 @@ export function BankAccountV1() {
                         }}
                       >
                         Cancel request
-                      </PillAction>
+                      </CardAction>
                     )}
                   </>
                 ) : (
                   canManage && (
-                    <PillAction onClick={startChange}>
+                    <CardAction tone="primary" onClick={startChange}>
                       {hasDraft ? "Continue your change" : "Change payout account"}
-                    </PillAction>
+                    </CardAction>
                   )
                 )}
-                <PillAction
+                <CardAction
                   chevron
                   onClick={() =>
                     setSearch({
@@ -416,7 +501,7 @@ export function BankAccountV1() {
                   }
                 >
                   Payout history
-                </PillAction>
+                </CardAction>
                 <p className="flex items-start gap-1.5 px-1 pt-1 text-xs text-muted-foreground">
                   {canManage ? (
                     pending ? (
@@ -443,19 +528,19 @@ export function BankAccountV1() {
 
           {history.length > 0 && (
             <section className="max-w-[920px] space-y-3" aria-labelledby="ba-history">
-              <h2 id="ba-history" className="text-[16px] font-semibold">
+              <h2 id="ba-history" className="text-base text-gray-900">
                 Change history
               </h2>
-              <ul className="divide-y divide-border overflow-hidden rounded-[20px] border border-border bg-card shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+              <ul className="divide-y divide-gray-100 overflow-hidden rounded-2xl border border-[#BDDCEE]/50 bg-white shadow-sm">
                 {history.map((request) => (
                   <li key={request.id}>
                     <button
                       type="button"
                       onClick={() => setOpenId(request.id)}
-                      className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 px-4 py-4 text-left transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900 sm:px-5"
+                      className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4 text-left transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900 sm:px-6"
                     >
                       <span className="min-w-0 flex-1 basis-60">
-                        <span className="flex flex-wrap items-center gap-x-2 text-[15px]">
+                        <span className="flex flex-wrap items-center gap-x-2 text-sm font-medium text-gray-900">
                           {request.from ? (
                             <>
                               <span>{accountLabel(request.from)}</span>
@@ -467,7 +552,7 @@ export function BankAccountV1() {
                           ) : null}
                           <span>{accountLabel(request.account)}</span>
                         </span>
-                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                        <span className="mt-1 block text-xs text-muted-foreground">
                           {request.id} · {fmtDate(request.date)}
                           {request.requestedBy && ` · Requested by ${request.requestedBy}`}
                         </span>
@@ -475,10 +560,7 @@ export function BankAccountV1() {
                       <StatusBadge
                         status={request.status === "Accepted" ? "Approved" : request.status}
                       />
-                      <ChevronRight
-                        className="h-4 w-4 shrink-0 text-foreground"
-                        aria-hidden="true"
-                      />
+                      <ChevronRight className="h-4 w-4 shrink-0 text-gray-500" aria-hidden="true" />
                     </button>
                   </li>
                 ))}
@@ -488,443 +570,489 @@ export function BankAccountV1() {
         </>
       )}
 
-      {view === "details" && (
-        <div className="max-w-[720px] space-y-5">
-          {flowHeader(
-            "New account details",
-            "Enter the details exactly as they appear on your bank statement.",
-          )}
-          <ErrorSummary errors={attempt > 0 ? errors : {}} focusKey={attempt} />
-          <Card className="space-y-5">
-            <TextInput
-              id="ba-holder"
-              label="Account holder name"
-              value={BUSINESS.name}
-              locked
-              hint="Payouts can only go to an account in your business's registered name. Need a different name? Contact Koko support."
-            />
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Combobox
-                id="ba-bank"
-                label="Bank"
-                value={bankDraft.bank}
-                onChange={(value) => {
-                  update("bank", value);
-                  touch("ba-bank");
-                }}
-                options={BANKS.map((bank) => ({ value: bank.name, label: bank.name }))}
-                placeholder="Choose a bank"
-                searchPlaceholder="Search banks"
-                emptyText="No banks match. Check the spelling."
-                error={shown("ba-bank")}
-              />
-              <Combobox
-                id="ba-branch"
-                label="Branch"
-                value={bankDraft.branch}
-                disabled={!bankEntry}
-                hint={bankEntry ? undefined : "Choose a bank first."}
-                onChange={(value) => {
-                  update("branch", value);
-                  touch("ba-branch");
-                }}
-                options={(bankEntry?.branches ?? []).map((branch) => ({
-                  value: branch.name,
-                  label: branch.name,
-                  meta: `Branch ${branch.code}`,
-                }))}
-                placeholder="Choose a branch"
-                searchPlaceholder="Search branches"
-                emptyText="No branches match. Try the city name."
-                error={shown("ba-branch")}
-              />
+      {view === "details" &&
+        flowShell(
+          <>
+            {flowTop(
+              "New account details",
+              "Enter the details exactly as they appear on your bank statement.",
+            )}
+            <div className="mb-7 empty:hidden">
+              <ErrorSummary errors={attempt > 0 ? errors : {}} focusKey={attempt} />
             </div>
-            <div className="grid gap-5 sm:grid-cols-2">
-              <div className="space-y-2">
+            <div className="flex flex-col gap-7">
+              <TextInput
+                id="ba-holder"
+                label="Account holder name"
+                value={BUSINESS.name}
+                locked
+                hint="Payouts can only go to an account in your business's registered name. Need a different name? Contact Koko support."
+              />
+              <div className="grid gap-7 sm:grid-cols-2 sm:gap-5">
+                <Combobox
+                  id="ba-bank"
+                  label="Bank"
+                  value={bankDraft.bank}
+                  onChange={(value) => {
+                    update("bank", value);
+                    touch("ba-bank");
+                  }}
+                  options={BANKS.map((bank) => ({ value: bank.name, label: bank.name }))}
+                  placeholder="Choose a bank"
+                  searchPlaceholder="Search banks"
+                  emptyText="No banks match. Check the spelling."
+                  error={shown("ba-bank")}
+                />
+                <Combobox
+                  id="ba-branch"
+                  label="Branch"
+                  value={bankDraft.branch}
+                  disabled={!bankEntry}
+                  hint={bankEntry ? undefined : "Choose a bank first."}
+                  onChange={(value) => {
+                    update("branch", value);
+                    touch("ba-branch");
+                  }}
+                  options={(bankEntry?.branches ?? []).map((branch) => ({
+                    value: branch.name,
+                    label: branch.name,
+                    meta: `Branch ${branch.code}`,
+                  }))}
+                  placeholder="Choose a branch"
+                  searchPlaceholder="Search branches"
+                  emptyText="No branches match. Try the city name."
+                  error={shown("ba-branch")}
+                />
+              </div>
+              <div className="grid gap-7 sm:grid-cols-2 sm:gap-5">
+                <div className="space-y-3">
+                  <TextInput
+                    id="ba-number"
+                    label="Account number"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder="Enter account number"
+                    value={group(digits)}
+                    onChange={(event) =>
+                      update("number", event.target.value.replace(/\D/g, "").slice(0, 18))
+                    }
+                    onBlur={() => touch("ba-number")}
+                    error={shown("ba-number")}
+                    aside={
+                      bankEntry && (
+                        <span
+                          className="text-xs tabular-nums text-muted-foreground"
+                          aria-hidden="true"
+                        >
+                          {digits.length}/
+                          {bankEntry.accountDigits[bankEntry.accountDigits.length - 1]}
+                        </span>
+                      )
+                    }
+                    hint={
+                      <>
+                        Spaces are added for you.{" "}
+                        <button
+                          type="button"
+                          className="font-medium text-gray-900 underline underline-offset-2"
+                          aria-expanded={showHelp}
+                          onClick={() => setShowHelp((value) => !value)}
+                        >
+                          Where do I find this?
+                        </button>
+                      </>
+                    }
+                  />
+                  {showHelp && (
+                    <InlineAlert tone="neutral" title="Finding your account number">
+                      It's printed at the top of your bank statement, next to the account name. In a
+                      passbook, it's on the first page. Don't use a card number or the branch code.
+                    </InlineAlert>
+                  )}
+                </div>
                 <TextInput
-                  id="ba-number"
-                  label="Account number"
+                  id="ba-confirm"
+                  label="Re-enter account number"
                   inputMode="numeric"
                   autoComplete="off"
-                  value={group(digits)}
+                  placeholder="Enter it again"
+                  value={group(confirmNumber)}
                   onChange={(event) =>
-                    update("number", event.target.value.replace(/\D/g, "").slice(0, 18))
+                    setConfirmNumber(event.target.value.replace(/\D/g, "").slice(0, 18))
                   }
-                  onBlur={() => touch("ba-number")}
-                  error={shown("ba-number")}
-                  aside={
-                    bankEntry && (
-                      <span
-                        className="text-xs tabular-nums text-muted-foreground"
-                        aria-hidden="true"
-                      >
-                        {digits.length}/
-                        {bankEntry.accountDigits[bankEntry.accountDigits.length - 1]}
-                      </span>
-                    )
-                  }
-                  hint={
-                    <>
-                      Spaces are added for you.{" "}
-                      <button
-                        type="button"
-                        className="font-medium text-foreground underline underline-offset-2"
-                        aria-expanded={showHelp}
-                        onClick={() => setShowHelp((value) => !value)}
-                      >
-                        Where do I find this?
-                      </button>
-                    </>
-                  }
+                  onBlur={() => touch("ba-confirm")}
+                  error={shown("ba-confirm")}
+                  hint="Type it again so we can catch any typos."
                 />
-                {showHelp && (
-                  <InlineAlert tone="neutral" title="Finding your account number">
-                    It's printed at the top of your bank statement, next to the account name. In a
-                    passbook, it's on the first page. Don't use a card number or the branch code.
-                  </InlineAlert>
-                )}
               </div>
-              <TextInput
-                id="ba-confirm"
-                label="Re-enter account number"
-                inputMode="numeric"
-                autoComplete="off"
-                value={group(confirmNumber)}
-                onChange={(event) =>
-                  setConfirmNumber(event.target.value.replace(/\D/g, "").slice(0, 18))
-                }
-                onBlur={() => touch("ba-confirm")}
-                error={shown("ba-confirm")}
-                hint="Type it again so we can catch any typos."
+              <FileDrop
+                id="ba-statement"
+                label="Bank statement"
+                hint={`A statement from the last 3 months that shows ${BUSINESS.name}, the bank and this account number.`}
+                file={statement}
+                error={fileError ?? shown("ba-statement")}
+                onFile={(file) => {
+                  setFileError(undefined);
+                  setStatement(file);
+                  touch("ba-statement");
+                }}
+                onRemove={() => setStatement(null)}
+                onReject={(message) => setFileError(message)}
               />
             </div>
-            <FileDrop
-              id="ba-statement"
-              label="Bank statement"
-              hint={`A statement from the last 3 months that shows ${BUSINESS.name}, the bank and this account number.`}
-              file={statement}
-              error={fileError ?? shown("ba-statement")}
-              onFile={(file) => {
-                setFileError(undefined);
-                setStatement(file);
-                touch("ba-statement");
-              }}
-              onRemove={() => setStatement(null)}
-              onReject={(message) => setFileError(message)}
-            />
-          </Card>
-          <StickyActions>
-            <Btn block onClick={toReview}>
-              Continue to review
-              <ArrowRight aria-hidden="true" />
-            </Btn>
-            <Btn
-              block
-              variant="tertiary"
-              onClick={() => {
-                setView("overview");
-                notify("Draft saved", "Continue any time from Bank account.");
-              }}
-            >
-              Save and exit
-            </Btn>
-          </StickyActions>
-        </div>
-      )}
+            <FlowActions>
+              <Btn size="lg" className={primaryClass} onClick={toReview}>
+                Continue to review
+                <ArrowRight aria-hidden="true" />
+              </Btn>
+              <Btn
+                variant="tertiary"
+                className={secondaryClass}
+                onClick={() => {
+                  setView("overview");
+                  notify("Draft saved", "Continue any time from Bank account.");
+                }}
+              >
+                Save and exit
+              </Btn>
+            </FlowActions>
+          </>,
+        )}
 
-      {view === "review" && (
-        <div className="max-w-[720px] space-y-5">
-          {flowHeader("Review the change", "Check the new account before you verify and submit.")}
-          <div className="grid items-stretch gap-3 md:grid-cols-[1fr_auto_1fr]">
-            <Card className="p-4 sm:p-5">
-              <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                From
-              </h3>
-              <div className="mt-3 flex items-center gap-3">
-                <BankLogo bank={data.account.bank} />
-                <div>
-                  <p className="text-[15px] font-semibold">{accountLabel(data.account)}</p>
-                  <p className="text-[14px] text-muted-foreground">{data.account.branch}</p>
+      {view === "review" &&
+        flowShell(
+          <>
+            {flowTop("Review the change", "Check the new account before you verify and submit.")}
+            <div className="flex flex-col gap-7">
+              <div className="grid items-stretch gap-3 md:grid-cols-[1fr_auto_1fr]">
+                <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+                  <h3 className={labelClass}>From</h3>
+                  <div className="mt-3 flex items-center gap-3">
+                    <BankLogo bank={data.account.bank} />
+                    <div className="min-w-0">
+                      <p className="text-base font-semibold text-gray-900">
+                        {accountLabel(data.account)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{data.account.branch}</p>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  className="flex items-center justify-center text-muted-foreground"
+                  aria-hidden="true"
+                >
+                  <ArrowRight className="hidden h-5 w-5 md:block" />
+                  <ArrowDown className="h-5 w-5 md:hidden" />
+                </div>
+                <div className="rounded-xl border border-gray-900 bg-white p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className={labelClass}>To</h3>
+                    <Btn
+                      variant="tertiary"
+                      size="sm"
+                      className="-mr-2 -mt-2 text-sm"
+                      onClick={() => setView("details")}
+                      aria-label="Edit, new account details"
+                    >
+                      Edit
+                    </Btn>
+                  </div>
+                  <div className="mt-1 flex items-center gap-3">
+                    <BankLogo bank={bankDraft.bank} />
+                    <div className="min-w-0">
+                      <p className="text-base font-semibold text-gray-900">{bankDraft.bank}</p>
+                      <p className="text-base font-medium tabular-nums text-gray-900">
+                        {group(digits)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{bankDraft.branch}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </Card>
-            <div
-              className="flex items-center justify-center text-muted-foreground"
-              aria-hidden="true"
-            >
-              <ArrowRight className="hidden h-5 w-5 md:block" />
-              <ArrowDown className="h-5 w-5 md:hidden" />
-            </div>
-            <Card className="border-gray-900 p-4 sm:p-5">
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  To
+              <dl className="grid gap-x-8 gap-y-4 rounded-xl border border-gray-200 p-4 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <dt className={labelClass}>Account holder</dt>
+                  <dd className={valueClass}>{BUSINESS.name}</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className={labelClass}>Bank statement</dt>
+                  <dd className={cn(valueClass, "break-words")}>
+                    {statement ? `${statement.name} · ${fileSize(statement.size)}` : "Not attached"}
+                  </dd>
+                </div>
+              </dl>
+              <section aria-labelledby="ba-next">
+                <h3 id="ba-next" className="mb-4 text-sm font-semibold text-gray-900">
+                  What happens next
                 </h3>
+                <Timeline
+                  items={[
+                    {
+                      label: "Confirm it's you",
+                      note: `We'll send a code to ${CURRENT_USER.maskedMobile}.`,
+                      state: "current",
+                    },
+                    {
+                      label: "Koko reviews the change",
+                      note: `Usually ${REVIEW_TIMES.bankAccount}. Payouts keep going to ${mask(data.account.number)}.`,
+                      state: "upcoming",
+                    },
+                    {
+                      label: "Payouts switch to the new account",
+                      note: `${REVIEW_TIMES.payoutHoldHours} hours after approval, for your security.`,
+                      state: "upcoming",
+                    },
+                  ]}
+                />
+              </section>
+              <Checkbox
+                id="ba-attest"
+                checked={attest}
+                onChange={setAttest}
+                error={
+                  attestAttempt > 0 && !attest
+                    ? "Confirm the account belongs to your business to continue."
+                    : undefined
+                }
+              >
+                {LEGAL.bankAccountAttestation(BUSINESS.name)}
+              </Checkbox>
+            </div>
+            <FlowActions>
+              <Btn size="lg" className={primaryClass} onClick={toVerify}>
+                Continue to verification
+                <ArrowRight aria-hidden="true" />
+              </Btn>
+              <Btn variant="tertiary" className={secondaryClass} onClick={() => setView("details")}>
+                Back to details
+              </Btn>
+            </FlowActions>
+          </>,
+        )}
+
+      {view === "verify" &&
+        flowShell(
+          <>
+            {flowTop("Confirm it's you", "Changing where payouts go needs a one-time code.")}
+            {submitAction.error && (
+              <div className="mb-7">
+                <InlineAlert tone="error" title="Your change wasn't submitted">
+                  {submitAction.error}
+                </InlineAlert>
+              </div>
+            )}
+            <div className="flex flex-col items-center gap-6 text-center">
+              <p className="max-w-sm text-sm text-gray-800">
+                We sent a 6-digit code to{" "}
+                <span className="font-semibold">{CURRENT_USER.maskedMobile}</span>. It expires in 10
+                minutes.
+              </p>
+              <div className="flex flex-col items-center gap-2">
+                <label htmlFor="ba-otp" className="text-sm font-medium text-gray-800">
+                  Verification code
+                </label>
+                <InputOTP
+                  id="ba-otp"
+                  maxLength={6}
+                  value={code}
+                  onChange={(value: string) => {
+                    setCode(value.replace(/\D/g, ""));
+                    setCodeError(undefined);
+                  }}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  containerClassName="justify-center"
+                  aria-invalid={codeError ? true : undefined}
+                  aria-describedby={codeError ? "ba-otp-error" : undefined}
+                >
+                  <InputOTPGroup className="gap-2">
+                    {[0, 1, 2, 3, 4, 5].map((index) => (
+                      <InputOTPSlot
+                        key={index}
+                        index={index}
+                        className={cn(
+                          "h-12 w-11 rounded-lg border border-[#8e8e9a] bg-[#f3f3f5] text-lg font-semibold text-gray-900 first:rounded-lg last:rounded-lg data-[active=true]:border-gray-900 data-[active=true]:bg-white data-[active=true]:ring-2 data-[active=true]:ring-gray-900/20",
+                          codeError && "border-[#b4232f] bg-white",
+                        )}
+                      />
+                    ))}
+                  </InputOTPGroup>
+                </InputOTP>
+                <FieldError id="ba-otp" error={codeError} />
+              </div>
+              {resendIn > 0 ? (
+                <p className="text-xs text-muted-foreground" aria-live="polite">
+                  Didn't get it? You can request a new code in {resendIn} seconds.
+                </p>
+              ) : (
                 <Btn
                   variant="tertiary"
                   size="sm"
-                  className="-mr-2 -mt-2"
-                  onClick={() => setView("details")}
-                  aria-label="Edit, new account details"
+                  className="text-sm"
+                  onClick={() => {
+                    setResendIn(30);
+                    notify("New code sent", `Check the SMS on ${CURRENT_USER.maskedMobile}.`);
+                  }}
                 >
-                  Edit
+                  Send a new code
                 </Btn>
-              </div>
-              <div className="mt-1 flex items-center gap-3">
-                <BankLogo bank={bankDraft.bank} />
-                <div className="min-w-0">
-                  <p className="text-[15px] font-semibold">{bankDraft.bank}</p>
-                  <p className="text-[15px] font-medium tabular-nums">{group(digits)}</p>
-                  <p className="text-[14px] text-muted-foreground">{bankDraft.branch}</p>
-                </div>
-              </div>
-            </Card>
-          </div>
-          <Card className="p-4 sm:p-5">
-            <DefinitionList
-              items={[
-                ["Account holder", BUSINESS.name],
-                [
-                  "Bank statement",
-                  statement ? `${statement.name} · ${fileSize(statement.size)}` : "Not attached",
-                ],
-              ]}
-            />
-          </Card>
-          <Card className="p-4 sm:p-5">
-            <h3 className="mb-4 text-[15px] font-semibold">What happens next</h3>
-            <Timeline
-              items={[
-                {
-                  label: "Confirm it's you",
-                  note: `We'll send a code to ${CURRENT_USER.maskedMobile}.`,
-                  state: "current",
-                },
-                {
-                  label: "Koko reviews the change",
-                  note: `Usually ${REVIEW_TIMES.bankAccount}. Payouts keep going to ${mask(data.account.number)}.`,
-                  state: "upcoming",
-                },
-                {
-                  label: "Payouts switch to the new account",
-                  note: `${REVIEW_TIMES.payoutHoldHours} hours after approval, for your security.`,
-                  state: "upcoming",
-                },
-              ]}
-            />
-          </Card>
-          <Checkbox
-            id="ba-attest"
-            checked={attest}
-            onChange={setAttest}
-            error={
-              attestAttempt > 0 && !attest
-                ? "Confirm the account belongs to your business to continue."
-                : undefined
-            }
-          >
-            {LEGAL.bankAccountAttestation(BUSINESS.name)}
-          </Checkbox>
-          <StickyActions>
-            <Btn block onClick={toVerify}>
-              Continue to verification
-              <ArrowRight aria-hidden="true" />
-            </Btn>
-            <Btn block variant="tertiary" onClick={() => setView("details")}>
-              Back to details
-            </Btn>
-          </StickyActions>
-        </div>
-      )}
-
-      {view === "verify" && (
-        <div className="max-w-[720px] space-y-5">
-          {flowHeader("Confirm it's you", "Changing where payouts go needs a one-time code.")}
-          {submitAction.error && (
-            <InlineAlert tone="error" title="Your change wasn't submitted">
-              {submitAction.error}
-            </InlineAlert>
-          )}
-          <Card className="space-y-4">
-            <p className="text-[14px]">
-              We sent a 6-digit code to{" "}
-              <span className="font-semibold">{CURRENT_USER.maskedMobile}</span>. It expires in 10
-              minutes.
-            </p>
-            <div className="space-y-2">
-              <label htmlFor="ba-otp" className="block text-[14px] font-medium">
-                Verification code
-              </label>
-              <InputOTP
-                id="ba-otp"
-                maxLength={6}
-                value={code}
-                onChange={(value: string) => {
-                  setCode(value.replace(/\D/g, ""));
-                  setCodeError(undefined);
-                }}
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                aria-invalid={codeError ? true : undefined}
-                aria-describedby={codeError ? "ba-otp-error" : undefined}
-              >
-                <InputOTPGroup>
-                  {[0, 1, 2, 3, 4, 5].map((index) => (
-                    <InputOTPSlot
-                      key={index}
-                      index={index}
-                      className={`h-12 w-11 border-[#6B7280] bg-white text-[18px] font-semibold ${codeError ? "border-[#b4232f]" : ""}`}
-                    />
-                  ))}
-                </InputOTPGroup>
-              </InputOTP>
-              <FieldError id="ba-otp" error={codeError} />
+              )}
             </div>
-            {resendIn > 0 ? (
-              <p className="text-[14px] text-muted-foreground" aria-live="polite">
-                Didn't get it? You can request a new code in {resendIn} seconds.
-              </p>
-            ) : (
+            <FlowActions>
+              <Btn
+                size="lg"
+                className={primaryClass}
+                loading={submitAction.pending}
+                onClick={verify}
+              >
+                {submitAction.pending
+                  ? "Submitting…"
+                  : submitAction.error
+                    ? "Try again"
+                    : "Verify and submit"}
+              </Btn>
               <Btn
                 variant="tertiary"
-                size="sm"
-                className="-ml-3"
-                onClick={() => {
-                  setResendIn(30);
-                  notify("New code sent", `Check the SMS on ${CURRENT_USER.maskedMobile}.`);
-                }}
+                className={secondaryClass}
+                disabled={submitAction.pending}
+                onClick={() => setView("review")}
               >
-                Send a new code
+                Back to review
               </Btn>
-            )}
-          </Card>
-          <StickyActions>
-            <Btn block loading={submitAction.pending} onClick={verify}>
-              {submitAction.pending
-                ? "Submitting…"
-                : submitAction.error
-                  ? "Try again"
-                  : "Verify and submit"}
-            </Btn>
-            <Btn
-              block
-              variant="tertiary"
-              disabled={submitAction.pending}
-              onClick={() => setView("review")}
-            >
-              Back to review
-            </Btn>
-          </StickyActions>
+            </FlowActions>
+          </>,
+        )}
+
+      {view === "done" && (
+        <div className="mx-auto w-full max-w-3xl">
+          <div className={cn(cardShell, "px-5 py-8 sm:px-12 sm:py-10")}>
+            <SoftFields>
+              <div className="mb-8 flex flex-col items-center space-y-2 text-center">
+                <span
+                  className="mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50"
+                  aria-hidden="true"
+                >
+                  <CheckCircle2 className="h-8 w-8 text-emerald-700" />
+                </span>
+                <h1
+                  ref={heading}
+                  tabIndex={-1}
+                  className="text-2xl font-bold tracking-tight text-gray-900 outline-none"
+                >
+                  Account change submitted
+                </h1>
+                <p className="max-w-md text-sm text-muted-foreground">
+                  We'll email {CURRENT_USER.email} and the account owner ({CURRENT_USER.ownerEmail})
+                  when it's reviewed. Payouts keep going to{" "}
+                  <span className="whitespace-nowrap">{mask(data.account.number)}</span> until then.
+                </p>
+              </div>
+              {receipt && (
+                <div className="mx-auto flex w-fit flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-lg bg-[#f3f3f5] px-4 py-2">
+                  <span className="text-sm text-muted-foreground">Reference</span>
+                  <span className="font-mono text-sm font-semibold text-gray-900">{receipt}</span>
+                  <CopyButton text={receipt} ariaLabel={`reference ${receipt}`} />
+                </div>
+              )}
+              <div className="mt-7 rounded-xl border border-gray-200 p-5">
+                <Timeline
+                  items={[
+                    {
+                      label: "Submitted",
+                      date: fmtDateTime(new Date().toISOString()),
+                      state: "done",
+                    },
+                    { label: "Verified with SMS code", state: "done" },
+                    {
+                      label: "Koko review",
+                      note: `Expected by ${fmtDate(addBusinessDays(new Date().toISOString(), reviewDays))}`,
+                      state: "current",
+                    },
+                    {
+                      label: "Payouts switch to the new account",
+                      note: `${REVIEW_TIMES.payoutHoldHours} hours after approval`,
+                      state: "upcoming",
+                    },
+                  ]}
+                />
+              </div>
+              <FlowActions>
+                <Btn size="lg" className={primaryClass} onClick={() => setView("overview")}>
+                  Back to bank account
+                </Btn>
+              </FlowActions>
+            </SoftFields>
+          </div>
         </div>
       )}
 
-      {view === "done" && (
-        <Card className="max-w-[720px] space-y-5">
-          <CheckCircle2 className="h-10 w-10 text-emerald-700" aria-hidden="true" />
-          <div>
-            <h1 ref={heading} tabIndex={-1} className="text-xl font-semibold outline-none">
-              Account change submitted
-            </h1>
-            <p className="mt-2 text-[14px] text-muted-foreground">
-              We'll email {CURRENT_USER.email} and the account owner ({CURRENT_USER.ownerEmail})
-              when it's reviewed. Payouts keep going to {mask(data.account.number)} until then.
-            </p>
-          </div>
-          {receipt && (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-[#f6f6f8] px-4 py-2">
-              <span className="text-[14px] text-muted-foreground">Reference</span>
-              <span className="font-mono text-[14px] font-semibold">{receipt}</span>
-              <CopyButton text={receipt} ariaLabel={`reference ${receipt}`} />
-            </div>
-          )}
-          <Timeline
-            items={[
-              { label: "Submitted", date: fmtDateTime(new Date().toISOString()), state: "done" },
-              { label: "Verified with SMS code", state: "done" },
-              {
-                label: "Koko review",
-                note: `Expected by ${fmtDate(addBusinessDays(new Date().toISOString(), reviewDays))}`,
-                state: "current",
-              },
-              {
-                label: "Payouts switch to the new account",
-                note: `${REVIEW_TIMES.payoutHoldHours} hours after approval`,
-                state: "upcoming",
-              },
-            ]}
-          />
-          <StickyActions>
-            <Btn block onClick={() => setView("overview")}>
-              Back to bank account
-            </Btn>
-          </StickyActions>
-        </Card>
-      )}
-
-      <Drawer
-        open={Boolean(detail)}
-        onOpenChange={(open) => {
-          if (!open) {
-            setOpenId(null);
-            setConfirmCancel(false);
-            cancelAction.clearError();
-          }
-        }}
-        title="Account change request"
-        description={detail ? `${detail.id} · Submitted ${fmtDate(detail.date)}` : undefined}
-        footer={
-          detail?.status === "Pending" && canManage ? (
-            confirmCancel ? (
-              <div className="space-y-3">
-                <p className="text-[14px] font-medium">
-                  Cancel this request? Your payout account stays as it is.
-                </p>
-                {cancelAction.error && (
-                  <InlineAlert tone="error" title="The request wasn't cancelled">
-                    {cancelAction.error}
-                  </InlineAlert>
-                )}
-                <div className="flex flex-wrap gap-2">
-                  <Btn
-                    variant="danger"
-                    className="border border-[#b4232f]"
-                    loading={cancelAction.pending}
-                    onClick={() => cancelRequest(detail.id)}
-                  >
-                    Cancel request
-                  </Btn>
-                  <Btn
-                    variant="tertiary"
-                    disabled={cancelAction.pending}
-                    onClick={() => setConfirmCancel(false)}
-                  >
-                    Keep request
-                  </Btn>
-                </div>
-              </div>
-            ) : (
-              <Btn variant="danger" className="-ml-3" onClick={() => setConfirmCancel(true)}>
-                Cancel request
-              </Btn>
-            )
-          ) : undefined
-        }
-      >
-        {detail && (
-          <RequestDetail
-            request={detail}
-            activeFrom={data.accountActiveFrom}
-            onRestart={
-              canManage && !pending
-                ? () => {
-                    setOpenId(null);
-                    startChange();
-                  }
-                : undefined
+      <SoftFields>
+        <Drawer
+          className="koko-portal-type"
+          open={Boolean(detail)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setOpenId(null);
+              setConfirmCancel(false);
+              cancelAction.clearError();
             }
-          />
-        )}
-      </Drawer>
+          }}
+          title="Account change request"
+          description={detail ? `${detail.id} · Submitted ${fmtDate(detail.date)}` : undefined}
+          footer={
+            detail?.status === "Pending" && canManage ? (
+              confirmCancel ? (
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-gray-900">
+                    Cancel this request? Your payout account stays as it is.
+                  </p>
+                  {cancelAction.error && (
+                    <InlineAlert tone="error" title="The request wasn't cancelled">
+                      {cancelAction.error}
+                    </InlineAlert>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    <Btn
+                      variant="danger"
+                      className="border border-[#b4232f]"
+                      loading={cancelAction.pending}
+                      onClick={() => cancelRequest(detail.id)}
+                    >
+                      Cancel request
+                    </Btn>
+                    <Btn
+                      variant="tertiary"
+                      disabled={cancelAction.pending}
+                      onClick={() => setConfirmCancel(false)}
+                    >
+                      Keep request
+                    </Btn>
+                  </div>
+                </div>
+              ) : (
+                <Btn variant="danger" className="-ml-3" onClick={() => setConfirmCancel(true)}>
+                  Cancel request
+                </Btn>
+              )
+            ) : undefined
+          }
+        >
+          {detail && (
+            <RequestDetail
+              request={detail}
+              activeFrom={data.accountActiveFrom}
+              onRestart={
+                canManage && !pending
+                  ? () => {
+                      setOpenId(null);
+                      startChange();
+                    }
+                  : undefined
+              }
+            />
+          )}
+        </Drawer>
+      </SoftFields>
     </V1Page>
   );
 }

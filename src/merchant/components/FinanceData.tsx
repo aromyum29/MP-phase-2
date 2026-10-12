@@ -44,8 +44,14 @@ export type BankRequest = {
 };
 // Iteration 1 moves cancelled requests here so iteration 2's lists and
 // one-active-request rules never see a status they don't know.
-export type CancelledBankRequest = Omit<BankRequest, "status"> & { status: "Cancelled"; cancelledAt: string };
-export type CancelledLoanRequest = Omit<LoanRequest, "status"> & { status: "Cancelled"; cancelledAt: string };
+export type CancelledBankRequest = Omit<BankRequest, "status"> & {
+  status: "Cancelled";
+  cancelledAt: string;
+};
+export type CancelledLoanRequest = Omit<LoanRequest, "status"> & {
+  status: "Cancelled";
+  cancelledAt: string;
+};
 export const initialAccount: Account = {
   holder: "Carnage Retail (Pvt) Ltd",
   bank: "Commercial Bank",
@@ -117,6 +123,25 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
   const [statement, setStatement] = useState<File | null>(null);
   useEffect(() => {
     try {
+      // Iteration 1 is a demo: a reload dismisses every bank account change
+      // (requests, approvals and drafts) and starts again from the original account.
+      if (localStorage.getItem("koko-portal-iteration") !== "2") {
+        const stored = sessionStorage.getItem("koko-finance-demo-v1");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed.loans) && parsed.loanDrafts)
+            setData({
+              ...parsed,
+              account: initialAccount,
+              bankRequests: [],
+              cancelledBankRequests: [],
+              accountActiveFrom: undefined,
+            });
+        }
+        sessionStorage.removeItem("koko-bank-draft-v1");
+        setLoaded(true);
+        return;
+      }
       const savedDraft = sessionStorage.getItem("koko-bank-draft-v1");
       if (savedDraft) {
         const parsedDraft = JSON.parse(savedDraft);

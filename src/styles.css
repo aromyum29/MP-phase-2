@@ -17,6 +17,12 @@
 .dark .koko-v1 {
   --muted-foreground: oklch(0.78 0 0);
 }
+/* Iteration 1 Bank account: text sizes follow the rest of the portal (as on
+   Create Order) instead of the larger iteration 1 scale. */
+.koko-v1.koko-portal-type {
+  --text-sm: 0.875rem;
+  --text-sm--line-height: calc(1.25 / 0.875);
+}
 /* Iteration 1 toasts: the app-wide green (#00A96E) is 3:1 with white text. */
 @layer base {
   [data-sonner-toast].koko-v1-toast {

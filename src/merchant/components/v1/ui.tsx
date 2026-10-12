@@ -1,5 +1,7 @@
 import {
+  createContext,
   forwardRef,
+  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -92,6 +94,15 @@ export const notifyError = (title: string, description?: string) =>
 
 /* ---------- Page structure ---------- */
 
+// Soft fields follow the Create Order form: filled inputs, labels above,
+// hints below. Opt in by wrapping a form in <SoftFields>; text, buttons and
+// timelines inside it also use the portal's smaller type scale.
+const SoftContext = createContext(false);
+export function SoftFields({ children }: { children: ReactNode }) {
+  return <SoftContext.Provider value={true}>{children}</SoftContext.Provider>;
+}
+const useSoft = () => useContext(SoftContext);
+
 export function V1Page({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={cn("koko-v1 w-full max-w-[1120px] space-y-6", className)}>{children}</div>;
 }
@@ -133,7 +144,7 @@ export function Card({ children, className, ...props }: ComponentProps<"section"
 
 type BtnProps = ComponentProps<"button"> & {
   variant?: "primary" | "secondary" | "tertiary" | "danger";
-  size?: "md" | "sm";
+  size?: "md" | "sm" | "lg";
   loading?: boolean;
   asChild?: boolean;
   block?: boolean;
@@ -149,6 +160,8 @@ const btnVariants = {
 const btnSizes = {
   md: "min-h-[44px] px-4 text-[14px] sm:min-h-[38px]",
   sm: "min-h-[44px] px-3 text-[14px] sm:min-h-[32px]",
+  // Matches the Create Order submit button.
+  lg: "min-h-[44px] px-6 text-sm font-semibold tracking-wide sm:h-12 sm:min-h-0",
 };
 export const Btn = forwardRef<HTMLButtonElement, BtnProps>(function Btn(
   {
@@ -165,10 +178,12 @@ export const Btn = forwardRef<HTMLButtonElement, BtnProps>(function Btn(
   },
   ref,
 ) {
+  const soft = useSoft();
   const classes = cn(
     btnBase,
     btnVariants[variant],
     btnSizes[size],
+    soft && size !== "lg" && "text-sm",
     block && "w-full sm:w-auto",
     className,
   );
@@ -232,13 +247,19 @@ const STATUS_BAR = {
 export function StatusBar({
   tone,
   children,
+  className,
 }: {
   tone: keyof typeof STATUS_BAR;
   children: ReactNode;
+  className?: string;
 }) {
   return (
     <p
-      className={cn("rounded-xl px-4 py-2.5 text-center text-[14px] font-medium", STATUS_BAR[tone])}
+      className={cn(
+        "rounded-xl px-4 py-2.5 text-center text-[14px] font-medium",
+        STATUS_BAR[tone],
+        className,
+      )}
     >
       {children}
     </p>
@@ -449,6 +470,8 @@ const TIMELINE_STATE = {
   failed: "not completed",
 };
 export function Timeline({ items }: { items: TimelineItem[] }) {
+  const soft = useSoft();
+  const size = soft ? "text-sm" : "text-[14px]";
   return (
     <ol>
       {items.map((item, index) => (
@@ -476,7 +499,9 @@ export function Timeline({ items }: { items: TimelineItem[] }) {
           <div className="min-w-0">
             <p
               className={cn(
-                "text-[14px] font-medium",
+                size,
+                "font-medium",
+                soft && "text-gray-900",
                 item.state === "upcoming" && "text-muted-foreground",
               )}
             >
@@ -484,7 +509,7 @@ export function Timeline({ items }: { items: TimelineItem[] }) {
               <span className="sr-only">, {TIMELINE_STATE[item.state]}</span>
             </p>
             {item.date && <p className="text-xs text-muted-foreground">{item.date}</p>}
-            {item.note && <div className="mt-1 text-[14px] text-muted-foreground">{item.note}</div>}
+            {item.note && <div className={cn("mt-1 text-muted-foreground", size)}>{item.note}</div>}
           </div>
         </li>
       ))}
@@ -499,12 +524,29 @@ export function DefinitionList({
   items: Array<[string, ReactNode]>;
   columns?: 1 | 2;
 }) {
+  const soft = useSoft();
   return (
     <dl className={cn("grid gap-x-8 gap-y-4", columns === 2 && "sm:grid-cols-2")}>
       {items.map(([label, value]) => (
         <div key={label} className="min-w-0">
-          <dt className="text-xs text-muted-foreground">{label}</dt>
-          <dd className="mt-0.5 break-words text-[15px] font-medium">{value}</dd>
+          <dt
+            className={cn(
+              "text-xs text-muted-foreground",
+              soft && "font-medium uppercase tracking-wider",
+            )}
+          >
+            {label}
+          </dt>
+          <dd
+            className={cn(
+              "break-words",
+              soft
+                ? "mt-1 text-base font-semibold text-gray-900"
+                : "mt-0.5 text-[15px] font-medium",
+            )}
+          >
+            {value}
+          </dd>
         </div>
       ))}
     </dl>
@@ -628,13 +670,20 @@ export function FilterChips({
 export const describedBy = (id: string, { hint, error }: { hint?: ReactNode; error?: string }) =>
   [error && `${id}-error`, hint && `${id}-hint`].filter(Boolean).join(" ") || undefined;
 
-const fieldClass = (error?: string) =>
-  cn(
-    "h-11 w-full rounded-lg border bg-white px-3 text-[16px] text-foreground transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-2 sm:h-10 sm:text-[14px]",
-    error
-      ? "border-[#b4232f] focus:ring-[#b4232f]/25"
-      : "border-[#6B7280] hover:border-gray-700 focus:border-gray-900 focus:ring-gray-900/15",
-  );
+const fieldClass = (error?: string, soft = false) =>
+  soft
+    ? cn(
+        "h-[44px] w-full rounded-lg border bg-[#f3f3f5] px-4 text-[16px] text-gray-800 transition-colors placeholder:text-gray-500 focus:bg-white focus:outline-none focus:ring-2 sm:h-12 sm:text-base",
+        error
+          ? "border-[#b4232f] bg-white focus:ring-[#b4232f]/20"
+          : "border-[#8e8e9a] hover:border-gray-600 focus:border-gray-900 focus:ring-gray-900/20",
+      )
+    : cn(
+        "h-11 w-full rounded-lg border bg-white px-3 text-[16px] text-foreground transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-2 sm:h-10 sm:text-[14px]",
+        error
+          ? "border-[#b4232f] focus:ring-[#b4232f]/25"
+          : "border-[#6B7280] hover:border-gray-700 focus:border-gray-900 focus:ring-gray-900/15",
+      );
 
 export function FieldError({ id, error }: { id: string; error?: string }) {
   if (!error) return null;
@@ -666,6 +715,27 @@ export function FieldShell({
   aside?: ReactNode;
   children: ReactNode;
 }) {
+  const soft = useSoft();
+  if (soft) {
+    return (
+      <div className="flex min-w-0 flex-col gap-2">
+        <div className="flex items-baseline justify-between gap-3">
+          <label htmlFor={id} className="text-sm font-medium text-gray-800">
+            {label}
+            {optional && <span className="font-normal text-gray-500"> (Optional)</span>}
+          </label>
+          {aside}
+        </div>
+        {children}
+        <FieldError id={id} error={error} />
+        {hint && (
+          <p id={`${id}-hint`} className="text-xs text-muted-foreground">
+            {hint}
+          </p>
+        )}
+      </div>
+    );
+  }
   return (
     <div className="min-w-0 space-y-1.5">
       <div className="flex items-baseline justify-between gap-3">
@@ -700,6 +770,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
   { id, label, hint, error, optional, aside, prefix, locked, className, ...input },
   ref,
 ) {
+  const soft = useSoft();
   return (
     <FieldShell id={id} label={label} hint={hint} error={error} optional={optional} aside={aside}>
       <div className="relative">
@@ -718,16 +789,17 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy(id, { hint, error })}
           className={cn(
-            fieldClass(error),
+            fieldClass(error, soft),
             prefix && "pl-12",
             locked && "cursor-default border-dashed bg-[#f6f6f8] pr-10",
+            locked && soft && "text-gray-700 focus:bg-[#f6f6f8]",
             className,
           )}
           {...input}
         />
         {locked && (
           <Lock
-            className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
             aria-label="Locked"
           />
         )}
@@ -918,6 +990,7 @@ export function Combobox({
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const soft = useSoft();
   const selected = options.find((option) => option.value === value);
   return (
     <FieldShell id={id} label={label} hint={hint} error={error}>
@@ -933,9 +1006,9 @@ export function Combobox({
             aria-describedby={describedBy(id, { hint, error })}
             disabled={disabled}
             className={cn(
-              fieldClass(error),
+              fieldClass(error, soft),
               "flex items-center justify-between gap-2 text-left disabled:cursor-not-allowed disabled:bg-[#f6f6f8]",
-              !selected && "text-muted-foreground",
+              !selected && (soft ? "text-gray-500" : "text-muted-foreground"),
             )}
           >
             <span className="truncate">
@@ -1015,6 +1088,7 @@ export function FileDrop({
   maxBytes?: number;
 }) {
   const [over, setOver] = useState(false);
+  const soft = useSoft();
   const input = useRef<HTMLInputElement>(null);
   const url = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
   useEffect(
@@ -1036,16 +1110,20 @@ export function FileDrop({
       );
     onFile(candidate);
   };
+  const hintText = hint && (
+    <p id={`${id}-hint`} className="text-xs text-muted-foreground">
+      {hint}
+    </p>
+  );
   return (
-    <div className="min-w-0 space-y-1.5">
-      <p id={`${id}-label`} className="text-[14px] font-medium">
+    <div className={soft ? "flex min-w-0 flex-col gap-2" : "min-w-0 space-y-1.5"}>
+      <p
+        id={`${id}-label`}
+        className={soft ? "text-sm font-medium text-gray-800" : "text-[14px] font-medium"}
+      >
         {label}
       </p>
-      {hint && (
-        <p id={`${id}-hint`} className="text-xs text-muted-foreground">
-          {hint}
-        </p>
-      )}
+      {!soft && hintText}
       <input
         ref={input}
         id={id}
@@ -1061,7 +1139,12 @@ export function FileDrop({
         }}
       />
       {file ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#6B7280] bg-white p-3">
+        <div
+          className={cn(
+            "flex flex-wrap items-center gap-3 border bg-white p-3",
+            soft ? "rounded-lg border-[#8e8e9a]" : "rounded-xl border-[#6B7280]",
+          )}
+        >
           <span
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#f1f1f4]"
             aria-hidden="true"
@@ -1106,16 +1189,19 @@ export function FileDrop({
             take(event.dataTransfer.files?.[0]);
           }}
           className={cn(
-            "flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed px-4 py-7 text-center transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-gray-900 peer-focus-visible:ring-offset-2",
+            "flex cursor-pointer flex-col items-center justify-center gap-1.5 border-dashed px-4 py-7 text-center transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-gray-900 peer-focus-visible:ring-offset-2",
+            soft ? "rounded-lg border" : "rounded-xl border-2",
             over
               ? "border-gray-900 bg-gray-50"
               : error
                 ? "border-[#b4232f] bg-red-50/40"
-                : "border-[#6B7280] bg-[#fafafb] hover:bg-gray-50",
+                : soft
+                  ? "border-[#8e8e9a] bg-[#f3f3f5] hover:bg-[#ececf0]"
+                  : "border-[#6B7280] bg-[#fafafb] hover:bg-gray-50",
           )}
         >
           <UploadCloud className="mb-1 h-6 w-6 text-muted-foreground" aria-hidden="true" />
-          <span className="text-[14px]">
+          <span className={soft ? "text-sm text-gray-800" : "text-[14px]"}>
             <span className="hidden sm:inline">
               {over ? "Drop the file to attach it" : "Drag a file here or "}
             </span>
@@ -1129,6 +1215,7 @@ export function FileDrop({
         </label>
       )}
       <FieldError id={id} error={error} />
+      {soft && hintText}
     </div>
   );
 }
@@ -1146,13 +1233,23 @@ export function Checkbox({
   children: ReactNode;
   error?: string;
 }) {
+  const soft = useSoft();
   return (
     <div className="space-y-1.5">
       <label
         htmlFor={id}
         className={cn(
-          "flex cursor-pointer items-start gap-3 rounded-lg border bg-white p-3 text-[14px] leading-relaxed has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-gray-900",
-          error && !checked ? "border-[#b4232f]" : checked ? "border-gray-900" : "border-[#6B7280]",
+          "flex cursor-pointer items-start gap-3 border leading-relaxed has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-gray-900",
+          soft
+            ? "rounded-xl bg-gray-50/60 p-4 text-sm text-gray-800"
+            : "rounded-lg bg-white p-3 text-[14px]",
+          error && !checked
+            ? "border-[#b4232f]"
+            : checked
+              ? "border-gray-900"
+              : soft
+                ? "border-gray-300"
+                : "border-[#6B7280]",
         )}
       >
         <input
@@ -1180,6 +1277,7 @@ export function Drawer({
   description,
   children,
   footer,
+  className,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -1187,12 +1285,16 @@ export function Drawer({
   description?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
+  className?: string;
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="koko-v1 w-full gap-0 p-0 sm:max-w-[560px] [&>button:last-child]:hidden"
+        className={cn(
+          "koko-v1 w-full gap-0 p-0 sm:max-w-[560px] [&>button:last-child]:hidden",
+          className,
+        )}
       >
         <SheetHeader className="flex-row items-start justify-between gap-3 border-b border-border px-5 py-4 sm:px-6">
           <div className="min-w-0 space-y-1">
