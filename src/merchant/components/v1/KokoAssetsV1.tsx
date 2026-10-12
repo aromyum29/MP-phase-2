@@ -19,6 +19,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import { cn } from "../ui/utils";
 import { useDemo, useFirstLoad } from "./demo";
 import { ASSETS, CATEGORIES, KIT, type AssetV1, type Variant } from "./assets-data";
 import { BRAND_COLOURS, BRAND_FONT } from "./placeholders";
@@ -29,7 +30,9 @@ import {
   PageHeader,
   SkeletonBlock,
   StatusBadge,
+  SURFACE_LIGHT,
   V1Page,
+  fieldClass,
   fileSize,
   fmtDate,
   notify,
@@ -64,6 +67,9 @@ function useDownload() {
   };
 }
 
+// A reload closes an open asset preview; filters and search stay.
+let freshLoad = true;
+
 export function KokoAssetsV1() {
   const loading = useFirstLoad("koko-assets");
   const [category, setCategory] = useViewParam<string>("category", "All");
@@ -74,6 +80,12 @@ export function KokoAssetsV1() {
     setQueryParam(value.trim());
   };
   const [previewId, setPreviewId] = useOptionalParam("asset");
+  useEffect(() => {
+    if (!freshLoad) return;
+    freshLoad = false;
+    if (previewId) setPreviewId(null, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [guideOpen, setGuideOpen] = useState(false);
   const download = useDownload();
   const searchRef = useRef<HTMLInputElement>(null);
@@ -155,10 +167,10 @@ export function KokoAssetsV1() {
           ))}
         </div>
         <div className="min-w-0 flex-1 basis-56">
-          <h2 id="kit-heading" className="text-[16px] font-semibold">
+          <h2 id="kit-heading" className="text-lg font-semibold">
             Starter kit
           </h2>
-          <p className="text-[14px] text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             The logo, Koko's Picks, the astronaut and the retail illustration. 4 PNG files · ZIP ·{" "}
             {fileSize(KIT.bytes)}
           </p>
@@ -179,7 +191,7 @@ export function KokoAssetsV1() {
         aria-labelledby="colours-heading"
         className="-mx-4 flex items-center gap-x-3 gap-y-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0"
       >
-        <h2 id="colours-heading" className="shrink-0 text-[14px] font-semibold">
+        <h2 id="colours-heading" className="shrink-0 text-sm font-semibold">
           Brand colours
         </h2>
         {BRAND_COLOURS.map((colour) => (
@@ -195,7 +207,7 @@ export function KokoAssetsV1() {
                 notifyError("Couldn't copy", `Select and copy ${colour.hex} instead.`);
               }
             }}
-            className="inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-full border border-[#6B7280] bg-white py-1 pl-1.5 pr-3 text-[14px] transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 sm:min-h-[34px]"
+            className="inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-full border border-gray-300 bg-white py-1 pl-1.5 pr-3 text-sm transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 sm:min-h-[34px]"
           >
             <span
               className="h-6 w-6 rounded-full border border-black/15"
@@ -207,7 +219,7 @@ export function KokoAssetsV1() {
             <Copy className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
           </button>
         ))}
-        <span className="shrink-0 text-[14px] text-muted-foreground">Typeface: {BRAND_FONT}</span>
+        <span className="shrink-0 text-sm text-muted-foreground">Typeface: {BRAND_FONT}</span>
       </section>
 
       <section aria-labelledby="library-heading" className="space-y-4">
@@ -231,7 +243,7 @@ export function KokoAssetsV1() {
           </div>
           <div className="relative w-full lg:w-[340px] lg:shrink-0">
             <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500"
               aria-hidden="true"
             />
             <input
@@ -241,7 +253,10 @@ export function KokoAssetsV1() {
               placeholder="Search logos, banners, posts"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              className="h-11 w-full rounded-lg border border-[#6B7280] bg-white pl-10 pr-11 text-[16px] placeholder:text-muted-foreground focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/15 sm:h-10 sm:text-[14px] [&::-webkit-search-cancel-button]:hidden"
+              className={cn(
+                fieldClass(undefined, true, Boolean(query)),
+                "pl-11 pr-11 [&::-webkit-search-cancel-button]:hidden",
+              )}
             />
             {query && (
               <button
@@ -258,7 +273,7 @@ export function KokoAssetsV1() {
             )}
           </div>
         </div>
-        <p role="status" className="text-[14px] text-muted-foreground">
+        <p role="status" className="text-sm text-muted-foreground">
           {status}
         </p>
 
@@ -277,12 +292,12 @@ export function KokoAssetsV1() {
         ) : (
           <div className="rounded-2xl border border-dashed border-[#9a9aa6] px-6 py-12 text-center">
             <ImageOff className="mx-auto mb-3 h-8 w-8 text-muted-foreground" aria-hidden="true" />
-            <p className="text-[15px] font-semibold">
+            <p className="text-base font-semibold">
               {query.trim()
                 ? `No assets match “${query.trim()}”`
                 : "No assets in this category yet"}
             </p>
-            <p className="mx-auto mt-1 max-w-md text-[14px] text-muted-foreground">
+            <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
               Try a broader word like “logo” or “banner”, or browse another category.
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -333,7 +348,7 @@ export function KokoAssetsV1() {
               How to use Koko's name, logo and artwork in your marketing.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-5 text-[14px] leading-relaxed">
+          <div className="space-y-5 text-sm leading-relaxed">
             {[
               [
                 "Logo",
@@ -411,7 +426,7 @@ function DownloadMenu({
               }
             >
               <span className="flex flex-col">
-                <span className="text-[14px] font-medium">{variant.bestFor}</span>
+                <span className="text-sm font-medium">{variant.bestFor}</span>
                 <span className="text-xs text-muted-foreground">
                   {describe(variant)}
                   {variant.note ? ` · ${variant.note}` : ""}
@@ -438,7 +453,10 @@ function AssetCard({
   const range = validity(asset);
   return (
     <article
-      className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card"
+      className={cn(
+        SURFACE_LIGHT,
+        "flex h-full flex-col overflow-hidden transition-shadow hover:shadow-[0_2px_4px_rgba(16,24,40,0.05),0_12px_28px_rgba(16,24,40,0.08)]",
+      )}
       aria-labelledby={`asset-${asset.id}`}
     >
       <button
@@ -472,10 +490,10 @@ function AssetCard({
           )}
         </div>
         <div>
-          <h3 id={`asset-${asset.id}`} className="text-[16px] font-semibold">
+          <h3 id={`asset-${asset.id}`} className="text-lg font-semibold">
             {asset.title}
           </h3>
-          <p className="mt-1 text-[14px] text-muted-foreground">{asset.usage}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{asset.usage}</p>
         </div>
         <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-1">
           <span className="text-xs text-muted-foreground">
@@ -483,7 +501,7 @@ function AssetCard({
             {fileSize(Math.min(...asset.variants.map((variant) => variant.bytes)))}
           </span>
           {expired ? (
-            <span className="text-[14px] text-muted-foreground">Downloads off</span>
+            <span className="text-sm text-muted-foreground">Downloads off</span>
           ) : (
             <DownloadMenu asset={asset} download={download} />
           )}
@@ -552,9 +570,9 @@ function AssetPreview({
           </Btn>
         </div>
       )}
-      <p className="rounded-xl bg-[#f6f6f8] p-3 text-[14px]">{asset.usage}</p>
+      <p className="rounded-xl bg-[#f6f6f8] p-3 text-sm">{asset.usage}</p>
       {range && (
-        <p className="text-[14px]">
+        <p className="text-sm">
           <StatusBadge
             status={expired ? "Expired" : "Active"}
             label={expired ? "Campaign ended" : "Campaign running"}
@@ -568,14 +586,14 @@ function AssetPreview({
       )}
       {!expired && (
         <section aria-labelledby="versions-heading">
-          <h3 id="versions-heading" className="mb-2 text-[15px] font-semibold">
+          <h3 id="versions-heading" className="mb-2 text-base font-semibold">
             Versions
           </h3>
           <ul className="divide-y divide-border rounded-xl border border-border">
             {asset.variants.map((variant) => (
               <li key={variant.url} className="flex flex-wrap items-center gap-3 px-4 py-3">
                 <span className="min-w-0 flex-1 basis-48">
-                  <span className="block text-[14px] font-medium">{variant.bestFor}</span>
+                  <span className="block text-sm font-medium">{variant.bestFor}</span>
                   <span className="block text-xs text-muted-foreground">
                     {describe(variant)}
                     {variant.note ? ` · ${variant.note}` : ""}

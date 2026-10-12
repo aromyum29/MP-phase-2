@@ -123,21 +123,10 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
   const [statement, setStatement] = useState<File | null>(null);
   useEffect(() => {
     try {
-      // Iteration 1 is a demo: a reload dismisses every bank account change
-      // (requests, approvals and drafts) and starts again from the original account.
+      // Iteration 1 is a demo: a reload dismisses every change on Bank account
+      // and Merchant credit (requests, approvals, drafts and notifications).
       if (localStorage.getItem("koko-portal-iteration") !== "2") {
-        const stored = sessionStorage.getItem("koko-finance-demo-v1");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed.loans) && parsed.loanDrafts)
-            setData({
-              ...parsed,
-              account: initialAccount,
-              bankRequests: [],
-              cancelledBankRequests: [],
-              accountActiveFrom: undefined,
-            });
-        }
+        sessionStorage.removeItem("koko-finance-demo-v1");
         sessionStorage.removeItem("koko-bank-draft-v1");
         setLoaded(true);
         return;

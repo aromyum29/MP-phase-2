@@ -5,23 +5,16 @@
 @import "./_globals.css";
 
 /* Iteration 1 Bank account, Merchant credit and Koko assets (UI audit X1, X2).
-   The portal root is 14px, so restore readable caption and body sizes and a
-   darker secondary text colour, scoped to these pages only. */
+   The portal root is 14px, so keep captions at a readable 12px and use a
+   darker secondary text colour; other sizes follow the portal scale, as on
+   Create Order, scoped to these pages only. */
 .koko-v1 {
   --muted-foreground: #5f5f70;
   --text-xs: 12px;
   --text-xs--line-height: 1.45;
-  --text-sm: 14px;
-  --text-sm--line-height: 1.5;
 }
 .dark .koko-v1 {
   --muted-foreground: oklch(0.78 0 0);
-}
-/* Iteration 1 Bank account: text sizes follow the rest of the portal (as on
-   Create Order) instead of the larger iteration 1 scale. */
-.koko-v1.koko-portal-type {
-  --text-sm: 0.875rem;
-  --text-sm--line-height: calc(1.25 / 0.875);
 }
 /* Iteration 1 toasts: the app-wide green (#00A96E) is 3:1 with white text. */
 @layer base {

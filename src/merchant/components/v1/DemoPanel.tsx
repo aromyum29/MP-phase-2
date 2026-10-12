@@ -94,9 +94,7 @@ export function DemoPanel() {
       footer={
         confirmReset ? (
           <div className="flex flex-wrap items-center gap-2">
-            <p className="mr-auto text-[14px]">
-              Clear all requests, drafts and the account change?
-            </p>
+            <p className="mr-auto text-sm">Clear all requests, drafts and the account change?</p>
             <Btn variant="tertiary" size="sm" onClick={() => setConfirmReset(false)}>
               Keep data
             </Btn>
@@ -123,12 +121,12 @@ export function DemoPanel() {
     >
       <div className="space-y-8">
         <section className="space-y-4" aria-labelledby="demo-scenario">
-          <h3 id="demo-scenario" className="text-[15px] font-semibold">
+          <h3 id="demo-scenario" className="text-base font-semibold">
             Scenario
           </h3>
           <label className="flex items-start justify-between gap-4 rounded-lg border border-border p-3">
             <span>
-              <span className="block text-[14px] font-medium">Fail the next request</span>
+              <span className="block text-sm font-medium">Fail the next request</span>
               <span className="block text-xs text-muted-foreground">
                 Shows the error and retry state on the next submit, verify or download.
               </span>
@@ -140,7 +138,7 @@ export function DemoPanel() {
             />
           </label>
           <div className="space-y-2">
-            <p className="text-[14px] font-medium">Signed-in role</p>
+            <p className="text-sm font-medium">Signed-in role</p>
             <FilterChips
               label="Signed-in role"
               value={settings.role}
@@ -152,7 +150,7 @@ export function DemoPanel() {
             </p>
           </div>
           <div className="space-y-2">
-            <p className="text-[14px] font-medium">Merchant credit eligibility</p>
+            <p className="text-sm font-medium">Merchant credit eligibility</p>
             <FilterChips
               label="Merchant credit eligibility"
               value={settings.eligibility}
@@ -163,22 +161,22 @@ export function DemoPanel() {
               ]}
             />
           </div>
-          <p className="rounded-lg bg-[#f6f6f8] p-3 text-[14px]">
+          <p className="rounded-lg bg-[#f6f6f8] p-3 text-sm">
             Verification code for the bank account change:{" "}
             <span className="font-mono font-semibold">{DEMO_OTP}</span>
           </p>
         </section>
 
         <section className="space-y-3" aria-labelledby="demo-bank">
-          <h3 id="demo-bank" className="text-[15px] font-semibold">
+          <h3 id="demo-bank" className="text-base font-semibold">
             Bank account review
           </h3>
           {pendingBank.length ? (
             <>
-              <label className="block space-y-1 text-[14px]">
+              <label className="block space-y-1 text-sm">
                 <span className="font-medium">Reason if declined</span>
                 <select
-                  className="h-10 w-full rounded-lg border border-[#6B7280] bg-white px-2 text-[14px]"
+                  className="h-10 w-full rounded-lg border border-[#6B7280] bg-white px-2 text-sm"
                   value={bankReason}
                   onChange={(event) => setBankReason(event.target.value)}
                 >
@@ -189,7 +187,7 @@ export function DemoPanel() {
               </label>
               {pendingBank.map((request) => (
                 <div key={request.id} className="space-y-3 rounded-lg border border-border p-3">
-                  <p className="text-[14px] font-medium">
+                  <p className="text-sm font-medium">
                     {request.account.bank} •••• {request.account.number.slice(-4)}
                     <span className="block text-xs font-normal text-muted-foreground">
                       {request.id}
@@ -211,22 +209,22 @@ export function DemoPanel() {
               ))}
             </>
           ) : (
-            <p className="text-[14px] text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               No account change is waiting for review.
             </p>
           )}
         </section>
 
         <section className="space-y-3" aria-labelledby="demo-credit">
-          <h3 id="demo-credit" className="text-[15px] font-semibold">
+          <h3 id="demo-credit" className="text-base font-semibold">
             Merchant credit responses
           </h3>
           {data.loans.length ? (
             <>
-              <label className="block space-y-1 text-[14px]">
+              <label className="block space-y-1 text-sm">
                 <span className="font-medium">Reason if declined</span>
                 <select
-                  className="h-10 w-full rounded-lg border border-[#6B7280] bg-white px-2 text-[14px]"
+                  className="h-10 w-full rounded-lg border border-[#6B7280] bg-white px-2 text-sm"
                   value={creditReason}
                   onChange={(event) => setCreditReason(event.target.value)}
                 >
@@ -245,7 +243,7 @@ export function DemoPanel() {
                 return (
                   <div key={request.id} className="space-y-3 rounded-lg border border-border p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-[14px] font-medium">
+                      <p className="text-sm font-medium">
                         {bankName(request.bankId)} · {lkr(request.form.amount)}
                         <span className="block text-xs font-normal text-muted-foreground">
                           {request.id}
@@ -283,18 +281,18 @@ export function DemoPanel() {
               })}
             </>
           ) : (
-            <p className="text-[14px] text-muted-foreground">No merchant credit requests yet.</p>
+            <p className="text-sm text-muted-foreground">No merchant credit requests yet.</p>
           )}
         </section>
 
         <section className="space-y-2" aria-labelledby="demo-placeholders">
-          <h3 id="demo-placeholders" className="text-[15px] font-semibold">
+          <h3 id="demo-placeholders" className="text-base font-semibold">
             Placeholder content in use
           </h3>
-          <p className="text-[14px] text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Replace these in v1/placeholders.ts once the real values are confirmed.
           </p>
-          <ul className="list-disc space-y-1 pl-5 text-[14px]">
+          <ul className="list-disc space-y-1 pl-5 text-sm">
             {PLACEHOLDER_SUMMARY.map((item) => (
               <li key={item}>{item}</li>
             ))}

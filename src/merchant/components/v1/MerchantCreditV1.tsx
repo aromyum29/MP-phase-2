@@ -10,6 +10,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { BankLogo } from "../BankLogo";
+import { cn } from "../ui/utils";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../ui/dialog";
 import {
   emptyLoan,
@@ -46,8 +47,11 @@ import {
   RadioCards,
   SkeletonBlock,
   StatusBadge,
-  StepIndicator,
-  StickyActions,
+  DoneCard,
+  FlowLayout,
+  FlowPrimary,
+  FlowSecondary,
+  SURFACE_LIGHT,
   TextInput,
   Timeline,
   UnderlineTabs,
@@ -60,7 +64,7 @@ import {
   statusLabel,
   type TimelineItem,
 } from "./ui";
-import { useOptionalParam, useViewParam } from "./url";
+import { useOptionalParam, useSetSearch, useViewParam } from "./url";
 
 type AnyLoan = LoanRequest | CancelledLoanRequest;
 const STEPS = ["Credit needs", "Business and contact", "Business finances", "Review and submit"];
@@ -103,6 +107,10 @@ function useEligibility() {
   };
 }
 
+// A reload starts the page fresh: an open application or request closes along
+// with the data (see FinanceDataProvider).
+let freshLoad = true;
+
 export function MerchantCreditV1() {
   const { data, setData } = useFinanceData();
   const canManage = useCanManageFinance();
@@ -115,10 +123,18 @@ export function MerchantCreditV1() {
   const step = Math.min(Math.max((Number(stepParam) || 1) - 1, 0), STEPS.length - 1);
   const setStep = (index: number) => setStepParam(String(index + 1));
   const [openId, setOpenId] = useOptionalParam("request");
+  const setSearch = useSetSearch();
   const [receipt, setReceipt] = useState<string | null>(null);
   const [discarding, setDiscarding] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const cancelAction = useAction();
+  useEffect(() => {
+    if (!freshLoad) return;
+    freshLoad = false;
+    if (applying || openId)
+      setSearch({ apply: null, step: null, request: null }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const requests: AnyLoan[] = useMemo(
     () =>
@@ -232,46 +248,35 @@ export function MerchantCreditV1() {
     const submitted = data.loans.find((request) => request.id === receipt);
     return (
       <V1Page>
-        <Card className="max-w-[720px] space-y-5">
-          <CheckCircle2 className="h-10 w-10 text-emerald-700" aria-hidden="true" />
-          <div>
-            <h1 className="text-xl font-semibold">
-              Request sent to {bankName(submitted?.bankId ?? "sampath")}
-            </h1>
-            <p className="mt-2 text-[14px] text-muted-foreground">
-              The bank usually responds in {eligibility.terms.decision}. We'll email{" "}
-              {CURRENT_USER.email} when it does. Sending a request doesn't guarantee credit.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-[#f6f6f8] px-4 py-2">
-            <span className="text-[14px] text-muted-foreground">Reference</span>
-            <span className="font-mono text-[14px] font-semibold">{receipt}</span>
-            <CopyButton text={receipt} ariaLabel={`reference ${receipt}`} />
-          </div>
-          {submitted && <Timeline items={timelineFor(submitted)} />}
-          <StickyActions>
-            <Btn
-              block
-              onClick={() => {
-                setReceipt(null);
-                setTab("requests");
-                setOpenId(receipt);
-              }}
-            >
-              View request
-            </Btn>
-            <Btn
-              block
-              variant="tertiary"
-              onClick={() => {
-                setReceipt(null);
-                setTab("requests");
-              }}
-            >
-              Go to requests
-            </Btn>
-          </StickyActions>
-        </Card>
+        <DoneCard
+          title={`Request sent to ${bankName(submitted?.bankId ?? "sampath")}`}
+          reference={receipt}
+          timeline={submitted ? timelineFor(submitted) : undefined}
+          actions={
+            <>
+              <FlowPrimary
+                onClick={() => {
+                  setReceipt(null);
+                  setTab("requests");
+                  setOpenId(receipt);
+                }}
+              >
+                View request
+              </FlowPrimary>
+              <FlowSecondary
+                onClick={() => {
+                  setReceipt(null);
+                  setTab("requests");
+                }}
+              >
+                Go to requests
+              </FlowSecondary>
+            </>
+          }
+        >
+          The bank usually responds in {eligibility.terms.decision}. We'll email{" "}
+          {CURRENT_USER.email} when it does. Sending a request doesn't guarantee credit.
+        </DoneCard>
       </V1Page>
     );
   }
@@ -311,7 +316,7 @@ export function MerchantCreditV1() {
           <EligibilityCard eligibility={eligibility} />
 
           <section aria-labelledby="mc-how" className="space-y-3">
-            <h2 id="mc-how" className="text-[16px] font-semibold">
+            <h2 id="mc-how" className="text-lg font-semibold">
               How it works
             </h2>
             <ol className="grid gap-3 sm:grid-cols-3">
@@ -331,8 +336,8 @@ export function MerchantCreditV1() {
                     {index + 1}
                   </span>
                   <span>
-                    <span className="block text-[14px] font-semibold">{title}</span>
-                    <span className="block text-[14px] text-muted-foreground">{body}</span>
+                    <span className="block text-sm font-semibold">{title}</span>
+                    <span className="block text-sm text-muted-foreground">{body}</span>
                   </span>
                 </li>
               ))}
@@ -340,7 +345,7 @@ export function MerchantCreditV1() {
           </section>
 
           <section aria-labelledby="mc-available" className="space-y-3">
-            <h2 id="mc-available" className="text-[16px] font-semibold">
+            <h2 id="mc-available" className="text-lg font-semibold">
               Available banks
             </h2>
             {lenders.map((lender) => {
@@ -352,10 +357,8 @@ export function MerchantCreditV1() {
                   <div className="flex flex-wrap items-center gap-3">
                     <BankLogo bank={lender.name} />
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-[16px] font-semibold">{lender.name}</h3>
-                      <p className="text-[14px] text-muted-foreground">
-                        Business funding through Koko
-                      </p>
+                      <h3 className="text-lg font-semibold">{lender.name}</h3>
+                      <p className="text-sm text-muted-foreground">Business funding through Koko</p>
                     </div>
                     {active && <StatusBadge status={active.status} />}
                   </div>
@@ -371,8 +374,8 @@ export function MerchantCreditV1() {
                     ]}
                   />
                   <div>
-                    <p className="text-[14px] font-medium">What you'll need</p>
-                    <ul className="mt-1 grid gap-x-6 gap-y-1 text-[14px] text-muted-foreground sm:grid-cols-2">
+                    <p className="text-sm font-medium">What you'll need</p>
+                    <ul className="mt-1 grid gap-x-6 gap-y-1 text-sm text-muted-foreground sm:grid-cols-2">
                       {terms.documents.map((doc) => (
                         <li key={doc} className="flex gap-2">
                           <FileText className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -384,20 +387,20 @@ export function MerchantCreditV1() {
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-5">
                     {active ? (
                       <>
-                        <Btn variant="secondary" onClick={() => setOpenId(active.id)}>
+                        <Btn size="lg" variant="secondary" onClick={() => setOpenId(active.id)}>
                           View request
                         </Btn>
-                        <p className="text-[14px] text-muted-foreground">
+                        <p className="text-sm text-muted-foreground">
                           You can have one open request with each bank.
                         </p>
                       </>
                     ) : !canManage ? (
-                      <p className="flex items-start gap-2 text-[14px] text-muted-foreground">
+                      <p className="flex items-start gap-2 text-sm text-muted-foreground">
                         <Lock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                         Only Super Admins and Finance Admins can apply for merchant credit.
                       </p>
                     ) : !eligibility.eligible ? (
-                      <p className="text-[14px] text-muted-foreground">
+                      <p className="text-sm text-muted-foreground">
                         You can apply once your business meets the requirements above.
                       </p>
                     ) : draft ? (
@@ -408,7 +411,11 @@ export function MerchantCreditV1() {
                         />
                       ) : (
                         <>
-                          <Btn onClick={() => startApplication(lender.id)}>
+                          <Btn
+                            size="lg"
+                            className="shadow-md"
+                            onClick={() => startApplication(lender.id)}
+                          >
                             Continue application
                             <ArrowRight aria-hidden="true" />
                           </Btn>
@@ -418,7 +425,11 @@ export function MerchantCreditV1() {
                         </>
                       )
                     ) : (
-                      <Btn onClick={() => startApplication(lender.id)}>
+                      <Btn
+                        size="lg"
+                        className="shadow-md"
+                        onClick={() => startApplication(lender.id)}
+                      >
                         Request merchant credit
                         <ArrowRight aria-hidden="true" />
                       </Btn>
@@ -431,20 +442,20 @@ export function MerchantCreditV1() {
 
           <section aria-labelledby="mc-soon" className="space-y-3">
             <div>
-              <h2 id="mc-soon" className="text-[16px] font-semibold">
+              <h2 id="mc-soon" className="text-lg font-semibold">
                 More banks coming soon
               </h2>
-              <p className="text-[14px] text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Get a notification when a bank starts accepting requests through Koko.
               </p>
             </div>
-            <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+            <ul className={cn(SURFACE_LIGHT, "divide-y divide-border overflow-hidden")}>
               {COMING_SOON_BANKS.map((bank) => {
                 const on = (data.notifyBanks ?? []).includes(bank.id);
                 return (
                   <li key={bank.id} className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
                     <BankLogo bank={bank.name} />
-                    <span className="min-w-0 flex-1 text-[14px] font-medium">{bank.name}</span>
+                    <span className="min-w-0 flex-1 text-sm font-medium">{bank.name}</span>
                     <StatusBadge status="Coming soon" />
                     <Btn
                       variant={on ? "tertiary" : "secondary"}
@@ -486,7 +497,7 @@ export function MerchantCreditV1() {
                 >
                   <BankLogo bank={bankName(bankId)} />
                   <div className="min-w-0 flex-1 basis-48">
-                    <p className="text-[14px] font-medium">{bankName(bankId)}</p>
+                    <p className="text-sm font-medium">{bankName(bankId)}</p>
                     <p className="text-xs text-muted-foreground">
                       {draft.amount ? `${lkr(draft.amount)} · ` : ""}Not sent yet
                     </p>
@@ -524,8 +535,8 @@ export function MerchantCreditV1() {
           )}
           {visible.length > 0 && (
             <>
-              <div className="hidden overflow-hidden rounded-2xl border border-border bg-card lg:block">
-                <table className="w-full text-left text-[14px]">
+              <div className={cn(SURFACE_LIGHT, "hidden overflow-hidden lg:block")}>
+                <table className="w-full text-left text-sm">
                   <caption className="sr-only">Merchant credit requests</caption>
                   <thead className="bg-[#f6f6f8] text-xs text-muted-foreground">
                     <tr>
@@ -589,13 +600,16 @@ export function MerchantCreditV1() {
                     <button
                       type="button"
                       onClick={() => setOpenId(request.id)}
-                      className="w-full space-y-3 rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
+                      className={cn(
+                        SURFACE_LIGHT,
+                        "w-full space-y-3 p-4 text-left transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900",
+                      )}
                     >
                       <span className="flex flex-wrap items-center justify-between gap-2">
                         <span className="flex items-center gap-3">
                           <BankLogo bank={bankName(request.bankId)} />
                           <span>
-                            <span className="block text-[14px] font-semibold">
+                            <span className="block text-sm font-semibold">
                               {bankName(request.bankId)}
                             </span>
                             <span className="block text-xs text-muted-foreground">
@@ -605,7 +619,7 @@ export function MerchantCreditV1() {
                         </span>
                         <StatusBadge status={request.status} />
                       </span>
-                      <span className="flex flex-wrap justify-between gap-2 text-[14px]">
+                      <span className="flex flex-wrap justify-between gap-2 text-sm">
                         <span className="font-medium tabular-nums">{lkr(request.form.amount)}</span>
                         <span className="text-muted-foreground">
                           Submitted {fmtDate(request.date)}
@@ -620,12 +634,12 @@ export function MerchantCreditV1() {
           {!visible.length && !(showDrafts && drafts.length) && (
             <div className="rounded-2xl border border-dashed border-[#9a9aa6] px-6 py-10 text-center">
               <FileText className="mx-auto mb-3 h-7 w-7 text-muted-foreground" aria-hidden="true" />
-              <p className="text-[15px] font-semibold">
+              <p className="text-base font-semibold">
                 {filter === "all"
                   ? "No requests yet"
                   : `No ${filter === "draft" ? "drafts" : statusLabel(filter).toLowerCase() + " requests"}`}
               </p>
-              <p className="mx-auto mt-1 max-w-md text-[14px] text-muted-foreground">
+              <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
                 {filter === "all"
                   ? "Check what you could get and send a request to a partner bank. Its response appears here."
                   : "Requests with this status will appear here."}
@@ -680,7 +694,7 @@ export function MerchantCreditV1() {
           ) : detail?.status === "Pending" && canManage ? (
             confirmCancel ? (
               <div className="space-y-3">
-                <p className="text-[14px] font-medium">
+                <p className="text-sm font-medium">
                   Cancel this request? {bankName(detail.bankId)} will stop reviewing it.
                 </p>
                 {cancelAction.error && (
@@ -735,7 +749,7 @@ export function MerchantCreditV1() {
 function DiscardConfirm({ onDiscard, onKeep }: { onDiscard: () => void; onKeep: () => void }) {
   return (
     <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Discard draft">
-      <span className="text-[14px] font-medium">Discard this draft?</span>
+      <span className="text-sm font-medium">Discard this draft?</span>
       <Btn size="sm" variant="danger" className="border border-[#b4232f]" onClick={onDiscard}>
         Discard
       </Btn>
@@ -759,11 +773,11 @@ function EligibilityCard({ eligibility }: { eligibility: ReturnType<typeof useEl
             <TrendingUp className="h-5 w-5" />
           </span>
           <div className="min-w-0 flex-1 basis-64">
-            <p className="text-[14px] font-medium text-emerald-900">You're eligible</p>
-            <h2 className="mt-1 text-[22px] font-bold tracking-tight">
+            <p className="text-sm font-medium text-emerald-900">You're eligible</p>
+            <h2 className="mt-1 text-2xl font-bold tracking-tight">
               You could request up to {lkr(eligibility.estimate)}
             </h2>
-            <p className="mt-1 text-[14px] text-muted-foreground">
+            <p className="mt-1 text-sm text-muted-foreground">
               Based on {lkr(eligibility.average)} average monthly Koko sales over the last 6 months
               and {eligibility.months} months on Koko. This is an estimate. The bank makes the final
               decision.
@@ -787,8 +801,8 @@ function EligibilityCard({ eligibility }: { eligibility: ReturnType<typeof useEl
   ];
   return (
     <Card>
-      <h2 className="text-[18px] font-semibold">Not eligible yet</h2>
-      <p className="mt-1 text-[14px] text-muted-foreground">
+      <h2 className="text-xl font-semibold">Not eligible yet</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
         Partner banks look at your Koko sales history. Here's where your business stands.
       </p>
       <ul className="mt-4 divide-y divide-border rounded-xl border border-border">
@@ -798,8 +812,8 @@ function EligibilityCard({ eligibility }: { eligibility: ReturnType<typeof useEl
             className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
           >
             <span>
-              <span className="block text-[14px] font-medium">{factor.label}</span>
-              <span className="block text-[14px] text-muted-foreground">{factor.value}</span>
+              <span className="block text-sm font-medium">{factor.label}</span>
+              <span className="block text-sm text-muted-foreground">{factor.value}</span>
             </span>
             <StatusBadge
               status={factor.ok ? "Verified" : "Pending"}
@@ -808,7 +822,7 @@ function EligibilityCard({ eligibility }: { eligibility: ReturnType<typeof useEl
           </li>
         ))}
       </ul>
-      <p className="mt-4 text-[14px] text-muted-foreground">
+      <p className="mt-4 text-sm text-muted-foreground">
         Keep taking payments with Koko. We'll let you know as soon as you qualify.
       </p>
     </Card>
@@ -942,7 +956,7 @@ function LoanDetail({ request, onRestart }: { request: AnyLoan; onRestart?: () =
 function DetailGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="space-y-3 border-t border-border pt-5">
-      <h3 className="text-[15px] font-semibold">{title}</h3>
+      <h3 className="text-base font-semibold">{title}</h3>
       {children}
     </section>
   );
@@ -1121,28 +1135,49 @@ function Application({
 
   return (
     <V1Page>
-      <div className="max-w-[720px] space-y-5">
-        <div className="space-y-4">
-          <BackLink onClick={() => (step === 0 ? onExit(Boolean(saved)) : setStep(step - 1))}>
-            {step === 0 ? "Merchant credit" : "Back"}
-          </BackLink>
-          <div className="flex flex-wrap items-center gap-3">
-            <BankLogo bank={bank} />
-            <h1 className="text-2xl font-bold tracking-tight">Request merchant credit</h1>
-          </div>
-          <StepIndicator steps={STEPS} current={step} onStep={setStep} />
-          <div>
-            <h2 ref={heading} tabIndex={-1} className="text-xl font-semibold outline-none">
-              {titles[0]}
-            </h2>
-            <p className="mt-1 text-[14px] text-muted-foreground">{titles[1]}</p>
-          </div>
+      <FlowLayout
+        back={{
+          label: step === 0 ? "Merchant credit" : "Back",
+          onClick: () => (step === 0 ? onExit(Boolean(saved)) : setStep(step - 1)),
+        }}
+        logo={<BankLogo bank={bank} />}
+        title="Request merchant credit"
+        subtitle={titles[1]}
+        steps={STEPS}
+        current={step}
+        stepTitle={titles[0]}
+        headingRef={heading}
+        actions={
+          <>
+            <FlowPrimary loading={submitAction.pending} onClick={next}>
+              {step < 3 ? (
+                <>
+                  Continue
+                  <ArrowRight aria-hidden="true" />
+                </>
+              ) : submitAction.pending ? (
+                "Sending…"
+              ) : submitAction.error ? (
+                "Try again"
+              ) : (
+                "Agree and submit"
+              )}
+            </FlowPrimary>
+            <FlowSecondary
+              disabled={submitAction.pending}
+              onClick={() => onExit(Boolean(data.loanDrafts[bankId]))}
+            >
+              Save and exit
+            </FlowSecondary>
+          </>
+        }
+      >
+        <div className="mb-7 empty:hidden">
+          <ErrorSummary errors={attempts[step] ? errors : {}} focusKey={attempts[step] ?? 0} />
         </div>
 
-        <ErrorSummary errors={attempts[step] ? errors : {}} focusKey={attempts[step] ?? 0} />
-
         {step === 0 && (
-          <Card className="space-y-6">
+          <div className="flex flex-col gap-7">
             <div className="space-y-3">
               <CurrencyInput
                 id="mc-amount"
@@ -1224,12 +1259,12 @@ function Application({
                 label: `${months} months`,
               }))}
             />
-          </Card>
+          </div>
         )}
 
         {step === 1 && (
-          <Card className="space-y-5">
-            <div className="grid gap-5 sm:grid-cols-2">
+          <div className="flex flex-col gap-7">
+            <div className="grid gap-7 sm:grid-cols-2 sm:gap-5">
               <TextInput
                 id="mc-business"
                 label="Registered business name"
@@ -1254,7 +1289,7 @@ function Application({
               error={shown("mc-contact")}
               hint="The bank calls this person about the request."
             />
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className="grid gap-7 sm:grid-cols-2 sm:gap-5">
               <TextInput
                 id="mc-phone"
                 label="Mobile number"
@@ -1277,11 +1312,11 @@ function Application({
                 error={shown("mc-email")}
               />
             </div>
-          </Card>
+          </div>
         )}
 
         {step === 2 && (
-          <Card className="space-y-6">
+          <div className="flex flex-col gap-7">
             <CurrencyInput
               id="mc-revenue"
               label="Average monthly revenue"
@@ -1316,11 +1351,11 @@ function Application({
                 hint="Add up repayments across all business loans and credit."
               />
             )}
-          </Card>
+          </div>
         )}
 
         {step === 3 && (
-          <>
+          <div className="flex flex-col gap-7">
             {[
               {
                 title: "Credit needs",
@@ -1354,9 +1389,9 @@ function Application({
                 ],
               },
             ].map((group) => (
-              <Card key={group.title} className="p-4 sm:p-5">
+              <section key={group.title} className="rounded-xl border border-gray-200 p-4">
                 <div className="mb-3 flex items-center justify-between gap-2">
-                  <h3 className="text-[15px] font-semibold">{group.title}</h3>
+                  <h3 className="text-sm font-semibold text-gray-900">{group.title}</h3>
                   <Btn
                     variant="tertiary"
                     size="sm"
@@ -1368,10 +1403,10 @@ function Application({
                   </Btn>
                 </div>
                 <DefinitionList items={group.items as Array<[string, string]>} />
-              </Card>
+              </section>
             ))}
             <section aria-labelledby="mc-legal" className="space-y-3">
-              <h3 id="mc-legal" className="text-[15px] font-semibold">
+              <h3 id="mc-legal" className="text-sm font-semibold text-gray-900">
                 Permissions
               </h3>
               <Checkbox
@@ -1390,11 +1425,11 @@ function Application({
               >
                 {LEGAL.authorised(BUSINESS.name)}
               </Checkbox>
-              <p className="text-[14px] text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 By selecting Agree and submit, you agree to {bank}'s{" "}
                 <button
                   type="button"
-                  className="font-medium text-foreground underline underline-offset-2"
+                  className="font-medium text-gray-900 underline underline-offset-2"
                   onClick={() => setTermsOpen(true)}
                 >
                   terms and privacy notice
@@ -1407,34 +1442,9 @@ function Application({
                 {submitAction.error}
               </InlineAlert>
             )}
-          </>
+          </div>
         )}
-
-        <StickyActions>
-          <Btn block loading={submitAction.pending} onClick={next}>
-            {step < 3 ? (
-              <>
-                Continue
-                <ArrowRight aria-hidden="true" />
-              </>
-            ) : submitAction.pending ? (
-              "Sending…"
-            ) : submitAction.error ? (
-              "Try again"
-            ) : (
-              "Agree and submit"
-            )}
-          </Btn>
-          <Btn
-            block
-            variant="tertiary"
-            disabled={submitAction.pending}
-            onClick={() => onExit(Boolean(data.loanDrafts[bankId]))}
-          >
-            Save and exit
-          </Btn>
-        </StickyActions>
-      </div>
+      </FlowLayout>
 
       <Dialog open={termsOpen} onOpenChange={setTermsOpen}>
         <DialogContent className="koko-v1">

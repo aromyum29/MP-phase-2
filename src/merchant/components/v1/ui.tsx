@@ -8,6 +8,7 @@ import {
   useState,
   type ComponentProps,
   type ReactNode,
+  type Ref,
 } from "react";
 import { Slot } from "@radix-ui/react-slot";
 import {
@@ -106,8 +107,18 @@ export function SoftFields({ children }: { children: ReactNode }) {
 const useSoft = () => useContext(SoftContext);
 
 export function V1Page({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("koko-v1 w-full max-w-[1120px] space-y-6", className)}>{children}</div>;
+  return (
+    <SoftFields>
+      <div className={cn("koko-v1 w-full max-w-[1120px] space-y-6", className)}>{children}</div>
+    </SoftFields>
+  );
 }
+
+// Card surfaces from the Create Order form: a prominent one for main cards
+// and flows, a lighter one for lists and grids.
+export const SURFACE = "rounded-2xl border border-[#BDDCEE]/50 bg-white shadow-xl";
+export const SURFACE_LIGHT =
+  "rounded-2xl border border-[#BDDCEE]/50 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.05)]";
 
 export function PageHeader({
   title,
@@ -132,9 +143,14 @@ export function PageHeader({
 }
 
 export function Card({ children, className, ...props }: ComponentProps<"section">) {
+  const soft = useSoft();
   return (
     <section
-      className={cn("rounded-2xl border border-border bg-card p-5 sm:p-6", className)}
+      className={cn(
+        soft ? SURFACE : "rounded-2xl border border-border bg-card",
+        "p-5 sm:p-6",
+        className,
+      )}
       {...props}
     >
       {children}
@@ -160,8 +176,8 @@ const btnVariants = {
   danger: "text-[#b4232f] hover:bg-red-50",
 };
 const btnSizes = {
-  md: "min-h-[44px] px-4 text-[14px] sm:min-h-[38px]",
-  sm: "min-h-[44px] px-3 text-[14px] sm:min-h-[32px]",
+  md: "min-h-[44px] px-4 text-sm sm:min-h-[38px]",
+  sm: "min-h-[44px] px-3 text-sm sm:min-h-[32px]",
   // Matches the Create Order submit button.
   lg: "min-h-[44px] px-6 text-sm font-semibold tracking-wide sm:h-12 sm:min-h-0",
 };
@@ -186,6 +202,9 @@ export const Btn = forwardRef<HTMLButtonElement, BtnProps>(function Btn(
     btnVariants[variant],
     btnSizes[size],
     soft && size !== "lg" && "text-sm",
+    soft &&
+      variant === "secondary" &&
+      "border-gray-300 text-gray-800 hover:border-gray-400 hover:bg-gray-50",
     block && "w-full sm:w-auto",
     className,
   );
@@ -226,7 +245,7 @@ export const PillAction = forwardRef<HTMLButtonElement, PillActionProps>(functio
       ref={ref}
       type={type ?? "button"}
       className={cn(
-        "flex min-h-[44px] w-full items-center justify-between gap-3 rounded-full border bg-white px-5 text-left text-[15px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+        "flex min-h-[44px] w-full items-center justify-between gap-3 rounded-full border bg-white px-5 text-left text-base transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
         tone === "danger"
           ? "border-[#c25b67] text-[#b4232f] hover:bg-red-50"
           : "border-[#8e8e9a] text-foreground hover:border-gray-900 hover:bg-gray-50",
@@ -258,7 +277,7 @@ export function StatusBar({
   return (
     <p
       className={cn(
-        "rounded-xl px-4 py-2.5 text-center text-[14px] font-medium",
+        "rounded-xl px-4 py-2.5 text-center text-sm font-medium",
         STATUS_BAR[tone],
         className,
       )}
@@ -402,8 +421,8 @@ export function InlineAlert({
     >
       <Icon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
       <div className="min-w-0 flex-1 basis-48">
-        <p className="text-[14px] font-semibold">{title}</p>
-        {children && <div className="mt-1 text-[14px] leading-relaxed">{children}</div>}
+        <p className="text-sm font-semibold">{title}</p>
+        {children && <div className="mt-1 text-sm leading-relaxed">{children}</div>}
       </div>
       {action && <div className="shrink-0 self-center">{action}</div>}
     </div>
@@ -432,12 +451,12 @@ export function ErrorSummary({
       role="alert"
       className="rounded-xl border border-[#b4232f]/40 bg-red-50 p-4 text-red-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b4232f]"
     >
-      <p className="text-[14px] font-semibold">
+      <p className="text-sm font-semibold">
         {entries.length === 1
           ? "Fix this to continue"
           : `Fix these ${entries.length} things to continue`}
       </p>
-      <ul className="mt-2 space-y-1 text-[14px]">
+      <ul className="mt-2 space-y-1 text-sm">
         {entries.map(([id, message]) => (
           <li key={id}>
             <a
@@ -473,7 +492,7 @@ const TIMELINE_STATE = {
 };
 export function Timeline({ items }: { items: TimelineItem[] }) {
   const soft = useSoft();
-  const size = soft ? "text-sm" : "text-[14px]";
+  const size = soft ? "text-sm" : "text-sm";
   return (
     <ol>
       {items.map((item, index) => (
@@ -542,9 +561,7 @@ export function DefinitionList({
           <dd
             className={cn(
               "break-words",
-              soft
-                ? "mt-1 text-base font-semibold text-gray-900"
-                : "mt-0.5 text-[15px] font-medium",
+              soft ? "mt-1 text-base font-semibold text-gray-900" : "mt-0.5 text-base font-medium",
             )}
           >
             {value}
@@ -602,7 +619,7 @@ export function UnderlineTabs({
               }
             }}
             className={cn(
-              "-mb-px inline-flex min-h-[44px] items-center gap-2 rounded-t-sm border-b-2 pb-2 pt-1 text-[15px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900",
+              "-mb-px inline-flex min-h-[44px] items-center gap-2 rounded-t-sm border-b-2 pb-2 pt-1 text-base font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900",
               active
                 ? "border-gray-900 text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground",
@@ -643,10 +660,10 @@ export function FilterChips({
             aria-pressed={active}
             onClick={() => onChange(item.value)}
             className={cn(
-              "inline-flex min-h-[44px] items-center gap-2 rounded-full border px-3.5 text-[14px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 sm:min-h-[34px]",
+              "inline-flex min-h-[44px] items-center gap-2 rounded-full border px-3.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 sm:min-h-[34px]",
               active
                 ? "border-gray-900 bg-gray-900 text-white"
-                : "border-[#6B7280] bg-white text-foreground hover:bg-gray-50",
+                : "border-gray-300 bg-white text-gray-800 hover:border-gray-400 hover:bg-gray-50",
             )}
           >
             {item.label}
@@ -672,16 +689,18 @@ export function FilterChips({
 export const describedBy = (id: string, { hint, error }: { hint?: ReactNode; error?: string }) =>
   [error && `${id}-error`, hint && `${id}-hint`].filter(Boolean).join(" ") || undefined;
 
-const fieldClass = (error?: string, soft = false) =>
+// Soft fields are grey while empty and turn white once filled or focused.
+export const fieldClass = (error?: string, soft = false, filled = false) =>
   soft
     ? cn(
-        "h-[44px] w-full rounded-lg border bg-[#f3f3f5] px-4 text-[16px] text-gray-800 transition-colors placeholder:text-gray-600 focus:bg-white focus:outline-none focus:ring-2 sm:h-12 sm:text-base",
+        "h-[44px] w-full rounded-lg border px-4 text-[16px] text-gray-800 transition-colors placeholder:text-gray-600 focus:bg-white focus:outline-none focus:ring-2 sm:h-12 sm:text-base",
+        error || filled ? "bg-white" : "bg-[#f3f3f5]",
         error
-          ? "border-[#b4232f] bg-white focus:ring-[#b4232f]/20"
+          ? "border-[#b4232f] focus:ring-[#b4232f]/20"
           : "border-[#8e8e9a] hover:border-gray-600 focus:border-gray-900 focus:ring-gray-900/20",
       )
     : cn(
-        "h-11 w-full rounded-lg border bg-white px-3 text-[16px] text-foreground transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-2 sm:h-10 sm:text-[14px]",
+        "h-11 w-full rounded-lg border bg-white px-3 text-[16px] text-foreground transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-2 sm:h-10 sm:text-sm",
         error
           ? "border-[#b4232f] focus:ring-[#b4232f]/25"
           : "border-[#6B7280] hover:border-gray-700 focus:border-gray-900 focus:ring-gray-900/15",
@@ -690,10 +709,7 @@ const fieldClass = (error?: string, soft = false) =>
 export function FieldError({ id, error }: { id: string; error?: string }) {
   if (!error) return null;
   return (
-    <p
-      id={`${id}-error`}
-      className="flex items-start gap-1.5 text-[13px] font-medium text-[#b4232f]"
-    >
+    <p id={`${id}-error`} className="flex items-start gap-1.5 text-xs font-medium text-[#b4232f]">
       <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
       {error}
     </p>
@@ -741,7 +757,7 @@ export function FieldShell({
   return (
     <div className="min-w-0 space-y-1.5">
       <div className="flex items-baseline justify-between gap-3">
-        <label htmlFor={id} className="text-[14px] font-medium text-foreground">
+        <label htmlFor={id} className="text-sm font-medium text-foreground">
           {label}
           {optional && <span className="font-normal text-muted-foreground"> (optional)</span>}
         </label>
@@ -778,7 +794,10 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
       <div className="relative">
         {prefix && (
           <span
-            className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-[14px] font-medium text-muted-foreground"
+            className={cn(
+              "pointer-events-none absolute inset-y-0 flex items-center text-sm font-medium",
+              soft ? "left-4 text-gray-500" : "left-3 text-muted-foreground",
+            )}
             aria-hidden="true"
           >
             {prefix}
@@ -791,8 +810,12 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy(id, { hint, error })}
           className={cn(
-            fieldClass(error, soft),
-            prefix && "pl-12",
+            fieldClass(
+              error,
+              soft,
+              input.value !== undefined && input.value !== null && String(input.value) !== "",
+            ),
+            prefix && (soft ? "pl-14" : "pl-12"),
             locked && "cursor-default border-dashed bg-[#f6f6f8] pr-10",
             locked && soft && "text-gray-700 focus:bg-[#f6f6f8]",
             className,
@@ -859,6 +882,7 @@ export function SelectInput({
   options: Array<{ value: string; label: string }>;
   placeholder?: string;
 }) {
+  const soft = useSoft();
   return (
     <FieldShell id={id} label={label} hint={hint} error={error} optional={optional}>
       <div className="relative">
@@ -869,7 +893,7 @@ export function SelectInput({
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy(id, { hint, error })}
           className={cn(
-            fieldClass(error),
+            fieldClass(error, soft, Boolean(value)),
             "appearance-none pr-10",
             !value && "text-muted-foreground",
           )}
@@ -915,14 +939,20 @@ export function RadioCards({
     4: "grid-cols-2 sm:grid-cols-4",
     5: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5",
   }[columns];
+  const soft = useSoft();
+  const hintText = hint && (
+    <p id={`${name}-hint`} className="text-xs text-muted-foreground">
+      {hint}
+    </p>
+  );
   return (
     <fieldset className="min-w-0 space-y-1.5">
-      <legend className="text-[14px] font-medium text-foreground">{legend}</legend>
-      {hint && (
-        <p id={`${name}-hint`} className="text-xs text-muted-foreground">
-          {hint}
-        </p>
-      )}
+      <legend
+        className={cn("text-sm font-medium", soft ? "mb-2 text-gray-800" : "text-foreground")}
+      >
+        {legend}
+      </legend>
+      {!soft && hintText}
       <div className={cn("grid gap-2 pt-0.5", grid)}>
         {options.map((option, index) => {
           const checked = option.value === value;
@@ -930,12 +960,18 @@ export function RadioCards({
             <label
               key={option.value}
               className={cn(
-                "flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border bg-white px-3 py-2 text-[14px] transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-gray-900 has-[:focus-visible]:ring-offset-1",
+                "flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-gray-900 has-[:focus-visible]:ring-offset-1",
+                soft && "px-4 sm:min-h-12",
                 checked
-                  ? "border-gray-900 bg-gray-50 font-medium shadow-[inset_0_0_0_1px_rgb(17,24,39)]"
+                  ? cn(
+                      "border-gray-900 font-medium shadow-[inset_0_0_0_1px_rgb(17,24,39)]",
+                      soft ? "bg-white text-gray-900" : "bg-gray-50",
+                    )
                   : error
-                    ? "border-[#b4232f]"
-                    : "border-[#6B7280] hover:border-gray-700",
+                    ? "border-[#b4232f] bg-white"
+                    : soft
+                      ? "border-[#8e8e9a] bg-[#f3f3f5] text-gray-800 hover:border-gray-600"
+                      : "border-[#6B7280] bg-white hover:border-gray-700",
               )}
             >
               <input
@@ -962,6 +998,7 @@ export function RadioCards({
         })}
       </div>
       <FieldError id={name} error={error} />
+      {soft && hintText}
     </fieldset>
   );
 }
@@ -1008,7 +1045,7 @@ export function Combobox({
             aria-describedby={describedBy(id, { hint, error })}
             disabled={disabled}
             className={cn(
-              fieldClass(error, soft),
+              fieldClass(error, soft, Boolean(selected)),
               "flex items-center justify-between gap-2 text-left disabled:cursor-not-allowed disabled:bg-[#f6f6f8]",
               !selected && (soft ? "text-gray-600" : "text-muted-foreground"),
             )}
@@ -1027,7 +1064,7 @@ export function Combobox({
           className="koko-v1 w-(--radix-popover-trigger-width) min-w-[260px] p-0"
         >
           <Command>
-            <CommandInput placeholder={searchPlaceholder} className="text-[16px] sm:text-[14px]" />
+            <CommandInput placeholder={searchPlaceholder} className="text-[16px] sm:text-sm" />
             <CommandList>
               <CommandEmpty>{emptyText}</CommandEmpty>
               <CommandGroup>
@@ -1039,7 +1076,7 @@ export function Combobox({
                       onChange(option.value);
                       setOpen(false);
                     }}
-                    className="min-h-[44px] text-[14px] sm:min-h-[40px]"
+                    className="min-h-[44px] text-sm sm:min-h-[40px]"
                   >
                     <Check
                       className={cn(
@@ -1145,7 +1182,7 @@ export function FileDrop({
     <div className={soft ? "flex min-w-0 flex-col gap-2" : "min-w-0 space-y-1.5"}>
       <p
         id={`${id}-label`}
-        className={soft ? "text-sm font-medium text-gray-800" : "text-[14px] font-medium"}
+        className={soft ? "text-sm font-medium text-gray-800" : "text-sm font-medium"}
       >
         {label}
       </p>
@@ -1271,7 +1308,7 @@ export function FileDrop({
             <FileText className="h-5 w-5" />
           </span>
           <div className="min-w-0 flex-1 basis-40">
-            <p className="truncate text-[14px] font-medium">{file.name}</p>
+            <p className="truncate text-sm font-medium">{file.name}</p>
             <p className="text-xs text-muted-foreground">
               {FILE_TYPES[file.type] ?? file.name.split(".").pop()?.toUpperCase()} ·{" "}
               {fileSize(file.size)} · Attached
@@ -1320,7 +1357,7 @@ export function FileDrop({
           )}
         >
           <UploadCloud className="mb-1 h-6 w-6 text-muted-foreground" aria-hidden="true" />
-          <span className={soft ? "text-sm text-gray-800" : "text-[14px]"}>
+          <span className={soft ? "text-sm text-gray-800" : "text-sm"}>
             <span className="hidden sm:inline">
               {over ? "Drop the file to attach it" : "Drag a file here or "}
             </span>
@@ -1360,14 +1397,14 @@ export function Checkbox({
         className={cn(
           "flex cursor-pointer items-start gap-3 border leading-relaxed has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-gray-900",
           soft
-            ? "rounded-xl bg-gray-50/60 p-4 text-sm text-gray-800"
-            : "rounded-lg bg-white p-3 text-[14px]",
+            ? cn("rounded-xl p-4 text-sm text-gray-800", checked ? "bg-white" : "bg-[#f3f3f5]")
+            : "rounded-lg bg-white p-3 text-sm",
           error && !checked
             ? "border-[#b4232f]"
             : checked
               ? "border-gray-900"
               : soft
-                ? "border-gray-300"
+                ? "border-[#8e8e9a]"
                 : "border-[#6B7280]",
         )}
       >
@@ -1419,7 +1456,7 @@ export function Drawer({
           <div className="min-w-0 space-y-1">
             <SheetTitle className="text-lg font-semibold">{title}</SheetTitle>
             {description && (
-              <SheetDescription className="text-[14px] text-muted-foreground">
+              <SheetDescription className="text-sm text-muted-foreground">
                 {description}
               </SheetDescription>
             )}
@@ -1457,6 +1494,157 @@ export function SkeletonBlock({ className }: { className?: string }) {
   );
 }
 
+/* ---------- Flows (Create Order layout) ---------- */
+
+// A task in one centred card: back link, title and subtitle, a slim progress
+// bar with the step name, the step's content, then the actions.
+export function FlowLayout({
+  back,
+  logo,
+  title,
+  subtitle,
+  steps,
+  current,
+  stepTitle,
+  headingRef,
+  children,
+  actions,
+}: {
+  back?: { label: string; onClick: () => void };
+  logo?: ReactNode;
+  title: string;
+  subtitle: ReactNode;
+  steps: string[];
+  current: number;
+  stepTitle: string;
+  headingRef?: Ref<HTMLHeadingElement>;
+  children: ReactNode;
+  actions: ReactNode;
+}) {
+  return (
+    <div className="mx-auto w-full max-w-3xl space-y-3">
+      {back && <BackLink onClick={back.onClick}>{back.label}</BackLink>}
+      <div className={cn(SURFACE, "px-5 py-8 sm:px-12 sm:py-10")}>
+        <div className="mb-8 flex flex-col items-center space-y-2 text-center">
+          {logo && <div className="mb-2">{logo}</div>}
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">{title}</h1>
+          <p className="text-sm text-muted-foreground">{subtitle}</p>
+        </div>
+        <div className="mb-8">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2
+              ref={headingRef}
+              tabIndex={-1}
+              className="text-sm font-semibold text-gray-900 outline-none"
+            >
+              {stepTitle}
+            </h2>
+            <p className="shrink-0 text-xs text-muted-foreground">
+              Step {current + 1} of {steps.length}
+            </p>
+          </div>
+          <nav aria-label="Progress">
+            <ol className="mt-2.5 flex gap-1.5">
+              {steps.map((step, index) => (
+                <li
+                  key={step}
+                  aria-current={index === current ? "step" : undefined}
+                  className={cn(
+                    "h-1 flex-1 rounded-full",
+                    index <= current ? "bg-gray-900" : "bg-[#e4e4ea]",
+                  )}
+                >
+                  <span className="sr-only">
+                    {step}
+                    {index < current ? " (completed)" : ""}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        </div>
+        {children}
+        <div className="flex flex-col gap-2 pt-8">{actions}</div>
+      </div>
+    </div>
+  );
+}
+
+const flowPrimary =
+  "w-full shadow-md hover:shadow-lg motion-safe:hover:-translate-y-px motion-safe:active:translate-y-0";
+export const FlowPrimary = forwardRef<HTMLButtonElement, BtnProps>(function FlowPrimary(
+  { className, ...props },
+  ref,
+) {
+  return <Btn ref={ref} size="lg" className={cn(flowPrimary, className)} {...props} />;
+});
+export const FlowSecondary = forwardRef<HTMLButtonElement, BtnProps>(function FlowSecondary(
+  { className, ...props },
+  ref,
+) {
+  return (
+    <Btn
+      ref={ref}
+      variant="tertiary"
+      className={cn("w-full text-gray-700", className)}
+      {...props}
+    />
+  );
+});
+
+// Confirmation after a flow: success mark, title, message, reference and timeline.
+export function DoneCard({
+  title,
+  headingRef,
+  children,
+  reference,
+  timeline,
+  actions,
+}: {
+  title: string;
+  headingRef?: Ref<HTMLHeadingElement>;
+  children: ReactNode;
+  reference?: string;
+  timeline?: TimelineItem[];
+  actions: ReactNode;
+}) {
+  return (
+    <div className="mx-auto w-full max-w-3xl">
+      <div className={cn(SURFACE, "px-5 py-8 sm:px-12 sm:py-10")}>
+        <div className="mb-8 flex flex-col items-center space-y-2 text-center">
+          <span
+            className="mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50"
+            aria-hidden="true"
+          >
+            <CheckCircle2 className="h-8 w-8 text-emerald-700" />
+          </span>
+          <h1
+            ref={headingRef}
+            tabIndex={-1}
+            className="text-2xl font-bold tracking-tight text-gray-900 outline-none"
+          >
+            {title}
+          </h1>
+          <p className="max-w-md text-sm text-muted-foreground">{children}</p>
+        </div>
+        {reference && (
+          <div className="mx-auto flex w-fit flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-lg bg-[#f3f3f5] px-4 py-2">
+            <span className="text-sm text-muted-foreground">Reference</span>
+            <span className="font-mono text-sm font-semibold text-gray-900">{reference}</span>
+            <CopyButton text={reference} ariaLabel={`reference ${reference}`} />
+          </div>
+        )}
+        {timeline && (
+          <div className="mt-7 rounded-xl border border-gray-200 p-5">
+            <Timeline items={timeline} />
+          </div>
+        )}
+        <div className="flex flex-col gap-2 pt-8">{actions}</div>
+      </div>
+    </div>
+  );
+}
+
 /* ---------- Steps ---------- */
 
 export function StepIndicator({
@@ -1470,7 +1658,7 @@ export function StepIndicator({
 }) {
   return (
     <nav aria-label="Progress">
-      <p className="text-[14px] text-muted-foreground sm:hidden">
+      <p className="text-sm text-muted-foreground sm:hidden">
         <span className="font-medium text-foreground">
           Step {current + 1} of {steps.length}
         </span>
@@ -1507,7 +1695,7 @@ export function StepIndicator({
               </span>
               <span
                 className={cn(
-                  "text-[14px]",
+                  "text-sm",
                   index === current
                     ? "font-semibold text-foreground"
                     : done
