@@ -492,7 +492,7 @@ export function BankAccountV1() {
                   )
                 )}
                 <CardAction
-                  chevron
+                  className="justify-center"
                   onClick={() =>
                     setSearch({
                       ...Object.fromEntries(VIEW_KEYS.map((key) => [key, null])),

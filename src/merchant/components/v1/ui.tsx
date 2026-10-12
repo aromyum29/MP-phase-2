@@ -26,7 +26,9 @@ import {
   Loader2,
   Lock,
   PencilLine,
+  RefreshCw,
   Sparkles,
+  Trash2,
   UploadCloud,
   X,
   XCircle,
@@ -673,7 +675,7 @@ export const describedBy = (id: string, { hint, error }: { hint?: ReactNode; err
 const fieldClass = (error?: string, soft = false) =>
   soft
     ? cn(
-        "h-[44px] w-full rounded-lg border bg-[#f3f3f5] px-4 text-[16px] text-gray-800 transition-colors placeholder:text-gray-500 focus:bg-white focus:outline-none focus:ring-2 sm:h-12 sm:text-base",
+        "h-[44px] w-full rounded-lg border bg-[#f3f3f5] px-4 text-[16px] text-gray-800 transition-colors placeholder:text-gray-600 focus:bg-white focus:outline-none focus:ring-2 sm:h-12 sm:text-base",
         error
           ? "border-[#b4232f] bg-white focus:ring-[#b4232f]/20"
           : "border-[#8e8e9a] hover:border-gray-600 focus:border-gray-900 focus:ring-gray-900/20",
@@ -1008,7 +1010,7 @@ export function Combobox({
             className={cn(
               fieldClass(error, soft),
               "flex items-center justify-between gap-2 text-left disabled:cursor-not-allowed disabled:bg-[#f6f6f8]",
-              !selected && (soft ? "text-gray-500" : "text-muted-foreground"),
+              !selected && (soft ? "text-gray-600" : "text-muted-foreground"),
             )}
           >
             <span className="truncate">
@@ -1108,8 +1110,32 @@ export function FileDrop({
       return onReject(
         `That file is ${fileSize(candidate.size)}. Choose a file under ${fileSize(maxBytes)}.`,
       );
-    onFile(candidate);
+    if (soft) startUpload(candidate);
+    else onFile(candidate);
   };
+  // Soft style: a short simulated upload with progress before the file attaches.
+  const [uploading, setUploading] = useState<{ file: File; progress: number } | null>(null);
+  const timer = useRef<ReturnType<typeof setInterval>>(undefined);
+  useEffect(() => () => clearInterval(timer.current), []);
+  const startUpload = (candidate: File) => {
+    clearInterval(timer.current);
+    let progress = 0;
+    setUploading({ file: candidate, progress });
+    timer.current = setInterval(() => {
+      progress = Math.min(100, progress + 10 + Math.random() * 15);
+      if (progress >= 100) {
+        clearInterval(timer.current);
+        setUploading(null);
+        onFile(candidate);
+      } else setUploading({ file: candidate, progress: Math.round(progress) });
+    }, 150);
+  };
+  const cancelUpload = () => {
+    clearInterval(timer.current);
+    setUploading(null);
+  };
+  const typeLabel = (item: File) =>
+    FILE_TYPES[item.type] ?? item.name.split(".").pop()?.toUpperCase();
   const hintText = hint && (
     <p id={`${id}-hint`} className="text-xs text-muted-foreground">
       {hint}
@@ -1138,7 +1164,100 @@ export function FileDrop({
           event.target.value = "";
         }}
       />
-      {file ? (
+      {soft && (
+        <span className="sr-only" role="status">
+          {uploading ? `Uploading ${uploading.file.name}` : file ? `${file.name} uploaded` : ""}
+        </span>
+      )}
+      {uploading ? (
+        <div className="rounded-lg border border-gray-200 bg-white p-3">
+          <div className="flex items-center gap-3">
+            <span
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#f3f3f5] text-gray-600"
+              aria-hidden="true"
+            >
+              <Loader2 className="h-5 w-5 motion-safe:animate-spin" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-gray-900">{uploading.file.name}</p>
+              <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
+                Uploading… {uploading.progress}% · {fileSize(uploading.file.size)}
+              </p>
+            </div>
+            <Btn
+              variant="tertiary"
+              size="sm"
+              onClick={cancelUpload}
+              aria-label={`Cancel upload, ${uploading.file.name}`}
+            >
+              Cancel
+            </Btn>
+          </div>
+          <div
+            role="progressbar"
+            aria-label={`Uploading ${uploading.file.name}`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={uploading.progress}
+            className="mt-3 h-1 overflow-hidden rounded-full bg-[#e4e4ea]"
+          >
+            <div
+              className="h-full rounded-full bg-gray-900 transition-[width] duration-150"
+              style={{ width: `${uploading.progress}%` }}
+            />
+          </div>
+        </div>
+      ) : soft && file ? (
+        <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3">
+          <span
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#f3f3f5] text-gray-700"
+            aria-hidden="true"
+          >
+            <FileText className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            {url ? (
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block truncate rounded text-sm font-medium text-gray-900 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
+              >
+                {file.name}
+                <span className="sr-only"> (opens a preview in a new tab)</span>
+              </a>
+            ) : (
+              <p className="truncate text-sm font-medium text-gray-900">{file.name}</p>
+            )}
+            <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-700" aria-hidden="true" />
+              Uploaded · {typeLabel(file)} · {fileSize(file.size)}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center">
+            <Btn
+              variant="tertiary"
+              size="sm"
+              className="w-11 px-0 text-gray-600 sm:w-8"
+              title="Replace file"
+              aria-label={`Replace ${file.name}`}
+              onClick={() => input.current?.click()}
+            >
+              <RefreshCw aria-hidden="true" />
+            </Btn>
+            <Btn
+              variant="tertiary"
+              size="sm"
+              className="w-11 px-0 text-gray-600 hover:bg-red-50 hover:text-[#b4232f] sm:w-8"
+              title="Remove file"
+              aria-label={`Remove ${file.name}`}
+              onClick={onRemove}
+            >
+              <Trash2 aria-hidden="true" />
+            </Btn>
+          </div>
+        </div>
+      ) : file ? (
         <div
           className={cn(
             "flex flex-wrap items-center gap-3 border bg-white p-3",
