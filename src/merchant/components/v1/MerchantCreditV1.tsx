@@ -96,32 +96,6 @@ const HOW_STEPS: Array<{ title: string; body: string; image: string }> = [
     image: "/merchant-credit/repay.webp",
   },
 ];
-const FAQ: Array<[string, string]> = [
-  [
-    "Who lends the money?",
-    "Sampath Bank. Koko doesn't lend. With your permission, Koko shares your sales history and business details so the bank can decide faster.",
-  ],
-  [
-    "How do I repay?",
-    "Directly to Sampath Bank, in monthly instalments over the period you agree with the bank. Your Koko payouts aren't affected.",
-  ],
-  [
-    "What does it cost?",
-    "Sampath Bank sets the interest rate and any fees. You see the full offer before you agree to anything.",
-  ],
-  [
-    "Who can apply?",
-    "Businesses selling with Koko for at least 6 months, with LKR 300,000 or more in average monthly Koko sales.",
-  ],
-  [
-    "What does the bank check?",
-    "Your Koko sales, your bank statements and, with your permission, a credit report from the Credit Information Bureau of Sri Lanka (CRIB).",
-  ],
-  [
-    "What if the bank says no or asks for changes?",
-    "You'll see the reason in Requests. If the bank asks for changes, you can update your request and send it again.",
-  ],
-];
 const STEPS = ["Credit needs", "Business details", "Finances and documents", "Review and submit"];
 const EMPLOYEE_RANGES = ["1–10", "11–50", "51–100", "100+"];
 // Business details already verified at onboarding (KYC), shown read-only.
@@ -213,24 +187,39 @@ export function MerchantCreditV1() {
   const [discarding, setDiscarding] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState<string | null>(null);
-  // Intro shown on every page load; Got it hides it until the next reload.
+  // Intro shown on every page load. Got it folds it into the header link
+  // (until the next reload), and the link opens it again.
   const [introSeen, setIntroSeen] = useState(introDismissed);
+  const [introOpen, setIntroOpen] = useState(!introDismissed);
+  const [helpPing, setHelpPing] = useState(false);
+  const introTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const showIntro = () => {
+    clearTimeout(introTimer.current);
+    introDismissed = false;
+    setIntroStep(0);
+    setIntroSeen(false);
+    // Mount folded, then unfold on the next frame so it animates in.
+    requestAnimationFrame(() => requestAnimationFrame(() => setIntroOpen(true)));
+  };
   useEffect(() => {
     // The "first visit" scenario brings it back while the page is open.
-    const show = () => {
-      introDismissed = false;
-      setIntroSeen(false);
-      setIntroStep(0);
+    window.addEventListener(INTRO_RESET_EVENT, showIntro);
+    return () => {
+      window.removeEventListener(INTRO_RESET_EVENT, showIntro);
+      clearTimeout(introTimer.current);
     };
-    window.addEventListener(INTRO_RESET_EVENT, show);
-    return () => window.removeEventListener(INTRO_RESET_EVENT, show);
   }, []);
   const dismissIntro = () => {
     introDismissed = true;
-    setIntroSeen(true);
-    setIntroStep(0);
+    setIntroOpen(false);
+    clearTimeout(introTimer.current);
+    introTimer.current = setTimeout(() => {
+      setIntroSeen(true);
+      setIntroStep(0);
+      setHelpPing(true);
+      introTimer.current = setTimeout(() => setHelpPing(false), 1600);
+    }, 320);
   };
-  const [howOpen, setHowOpen] = useState(false);
   const [introStep, setIntroStep] = useState(0);
   const cancelAction = useAction();
   useEffect(() => {
@@ -409,8 +398,12 @@ export function MerchantCreditV1() {
         actions={
           <Btn
             variant="tertiary"
-            className="-ml-3 sm:-mr-3 sm:ml-0"
-            onClick={() => setHowOpen(true)}
+            className={cn(
+              "-ml-3 transition-colors sm:-mr-3 sm:ml-0",
+              helpPing && "bg-[#e6f0f7] ring-2 ring-[#BDDCEE]",
+            )}
+            aria-expanded={!introSeen && introOpen}
+            onClick={() => (introSeen ? showIntro() : dismissIntro())}
           >
             <HelpCircle aria-hidden="true" />
             How merchant credit works
@@ -430,89 +423,89 @@ export function MerchantCreditV1() {
       {tab === "banks" ? (
         <div className="max-w-[880px] space-y-8">
           {!introSeen && (
-            <section
-              aria-labelledby="mc-intro"
-              className="relative overflow-hidden rounded-2xl border border-[#BDDCEE] bg-[#f1f7fb]"
+            <div
+              className={cn(
+                "grid motion-safe:transition-[grid-template-rows,opacity] motion-safe:duration-300 motion-safe:ease-out",
+                introOpen ? "grid-rows-[1fr] opacity-100" : "-mb-8 grid-rows-[0fr] opacity-0",
+              )}
             >
-              <Btn
-                variant="tertiary"
-                size="sm"
-                className="absolute right-2 top-2 z-10 w-11 px-0 sm:w-9"
-                aria-label="Close introduction"
-                onClick={dismissIntro}
+              <section
+                aria-labelledby="mc-intro"
+                className={cn(
+                  "relative min-h-0 origin-top-right overflow-hidden rounded-2xl border border-[#BDDCEE] bg-[#f1f7fb] motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-out",
+                  introOpen ? "scale-100" : "scale-[0.4]",
+                )}
               >
-                <X aria-hidden="true" />
-              </Btn>
-              <div className="grid items-center gap-6 p-5 sm:p-6 md:grid-cols-[240px_minmax(0,1fr)] md:gap-8 md:p-8">
-                <img
-                  key={HOW_STEPS[introStep].image}
-                  src={HOW_STEPS[introStep].image}
-                  alt=""
-                  width={240}
-                  height={240}
-                  className="mx-auto aspect-square w-full max-w-[200px] rounded-2xl bg-white object-contain motion-safe:animate-in motion-safe:fade-in md:max-w-[240px]"
-                />
-                <div className="min-w-0">
-                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    <span id="mc-intro">How merchant credit works</span>
-                    <span aria-hidden="true"> · </span>
-                    <span className="normal-case tracking-normal">
-                      {introStep + 1} of {HOW_STEPS.length}
-                    </span>
-                  </p>
-                  <div aria-live="polite">
-                    <h2 className="mt-2 text-xl text-gray-900">{HOW_STEPS[introStep].title}</h2>
-                    <p className="mt-1 max-w-md text-sm text-gray-700">
-                      {HOW_STEPS[introStep].body}
+                <Btn
+                  variant="tertiary"
+                  size="sm"
+                  className="absolute right-2 top-2 z-10 w-11 px-0 sm:w-9"
+                  aria-label="Close introduction"
+                  onClick={dismissIntro}
+                >
+                  <X aria-hidden="true" />
+                </Btn>
+                <div className="grid items-center gap-6 p-5 sm:p-6 md:grid-cols-[240px_minmax(0,1fr)] md:gap-8 md:p-8">
+                  <img
+                    key={HOW_STEPS[introStep].image}
+                    src={HOW_STEPS[introStep].image}
+                    alt=""
+                    width={240}
+                    height={240}
+                    className="mx-auto aspect-square w-full max-w-[200px] rounded-2xl bg-white object-contain motion-safe:animate-in motion-safe:fade-in md:max-w-[240px]"
+                  />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      <span id="mc-intro">How merchant credit works</span>
+                      <span aria-hidden="true"> · </span>
+                      <span className="normal-case tracking-normal">
+                        {introStep + 1} of {HOW_STEPS.length}
+                      </span>
                     </p>
-                  </div>
-                  <div className="mt-5 flex gap-1.5" role="group" aria-label="Steps">
-                    {HOW_STEPS.map((item, index) => (
-                      <button
-                        key={item.title}
-                        type="button"
-                        aria-label={`Step ${index + 1}: ${item.title}`}
-                        aria-current={index === introStep ? "step" : undefined}
-                        onClick={() => setIntroStep(index)}
-                        className="flex h-6 items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
-                      >
-                        <span
-                          className={cn(
-                            "block h-1.5 rounded-full transition-all",
-                            index === introStep ? "w-6 bg-gray-900" : "w-1.5 bg-gray-400",
-                          )}
-                        />
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-5 flex flex-wrap items-center gap-2">
-                    {introStep > 0 && (
-                      <Btn variant="tertiary" onClick={() => setIntroStep(introStep - 1)}>
-                        Back
-                      </Btn>
-                    )}
-                    {introStep < HOW_STEPS.length - 1 ? (
-                      <Btn onClick={() => setIntroStep(introStep + 1)}>
-                        Next
-                        <ArrowRight aria-hidden="true" />
-                      </Btn>
-                    ) : canManage && eligibility.eligible && !activeFor("sampath") ? (
-                      <Btn
-                        onClick={() => {
-                          dismissIntro();
-                          startApplication("sampath");
-                        }}
-                      >
-                        Get started
-                        <ArrowRight aria-hidden="true" />
-                      </Btn>
-                    ) : (
-                      <Btn onClick={dismissIntro}>Done</Btn>
-                    )}
+                    <div aria-live="polite">
+                      <h2 className="mt-2 text-xl text-gray-900">{HOW_STEPS[introStep].title}</h2>
+                      <p className="mt-1 max-w-md text-sm text-gray-700">
+                        {HOW_STEPS[introStep].body}
+                      </p>
+                    </div>
+                    <div className="mt-5 flex gap-1.5" role="group" aria-label="Steps">
+                      {HOW_STEPS.map((item, index) => (
+                        <button
+                          key={item.title}
+                          type="button"
+                          aria-label={`Step ${index + 1}: ${item.title}`}
+                          aria-current={index === introStep ? "step" : undefined}
+                          onClick={() => setIntroStep(index)}
+                          className="flex h-6 items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
+                        >
+                          <span
+                            className={cn(
+                              "block h-1.5 rounded-full transition-all",
+                              index === introStep ? "w-6 bg-gray-900" : "w-1.5 bg-gray-400",
+                            )}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-5 flex flex-wrap items-center gap-2">
+                      {introStep > 0 && (
+                        <Btn variant="tertiary" onClick={() => setIntroStep(introStep - 1)}>
+                          Back
+                        </Btn>
+                      )}
+                      {introStep < HOW_STEPS.length - 1 ? (
+                        <Btn onClick={() => setIntroStep(introStep + 1)}>
+                          Next
+                          <ArrowRight aria-hidden="true" />
+                        </Btn>
+                      ) : (
+                        <Btn onClick={dismissIntro}>Got it</Btn>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </section>
+              </section>
+            </div>
           )}
           {lenders.map((lender) => {
             const terms = LENDER_TERMS[lender.id];
@@ -957,59 +950,6 @@ export function MerchantCreditV1() {
             }
           />
         )}
-      </Drawer>
-
-      <Drawer
-        open={howOpen}
-        onOpenChange={setHowOpen}
-        title="How merchant credit works"
-        description="Business funding from partner banks. Koko helps you apply."
-        footer={
-          canManage && eligibility.eligible && !activeFor("sampath") ? (
-            <Btn
-              block
-              className="sm:w-full"
-              onClick={() => {
-                setHowOpen(false);
-                dismissIntro();
-                startApplication("sampath");
-              }}
-            >
-              Request merchant credit
-              <ArrowRight aria-hidden="true" />
-            </Btn>
-          ) : undefined
-        }
-      >
-        <div className="space-y-7">
-          <ol className="space-y-4">
-            {HOW_STEPS.map(({ title, body }, index) => (
-              <li key={title} className="flex gap-3">
-                <span
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-900 text-xs font-semibold text-white"
-                  aria-hidden="true"
-                >
-                  {index + 1}
-                </span>
-                <span className="text-sm">
-                  <span className="block font-medium text-gray-900">{title}</span>
-                  <span className="block text-muted-foreground">{body}</span>
-                </span>
-              </li>
-            ))}
-          </ol>
-          <section aria-labelledby="mc-faq" className="space-y-5 border-t border-gray-100 pt-6">
-            <h3 id="mc-faq" className="text-sm font-semibold text-gray-900">
-              Common questions
-            </h3>
-            {FAQ.map(([question, answer]) => (
-              <div key={question}>
-                <h4 className="text-sm font-medium text-gray-900">{question}</h4>
-                <p className="mt-1 text-sm text-muted-foreground">{answer}</p>
-              </div>
-            ))}
-          </section>
-        </div>
       </Drawer>
     </V1Page>
   );
