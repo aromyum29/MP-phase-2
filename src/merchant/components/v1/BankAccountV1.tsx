@@ -649,7 +649,7 @@ export function BankAccountV1() {
           headingRef={heading}
           actions={
             <>
-              <FlowPrimary onClick={toVerify}>
+              <FlowPrimary disabled={!attest} onClick={toVerify}>
                 Continue to verification
                 <ArrowRight aria-hidden="true" />
               </FlowPrimary>
