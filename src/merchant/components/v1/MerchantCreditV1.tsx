@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ExternalLink,
+  X,
   HelpCircle,
   FileText,
   Lock,
@@ -76,22 +77,22 @@ type AnyLoan = LoanRequest | CancelledLoanRequest;
 const HOW_STEPS: Array<{ title: string; body: string; image: string }> = [
   {
     title: "Apply in 5 minutes",
-    body: "Most details come from Koko.",
+    body: "Most of your details come straight from your Koko account.",
     image: "/merchant-credit/apply.webp",
   },
   {
-    title: "Sampath Bank decides",
-    body: "In about 5 business days.",
+    title: "The bank decides",
+    body: "A partner bank reviews your request in about 5 business days and makes you an offer.",
     image: "/merchant-credit/bank-decides.webp",
   },
   {
     title: "Get funded",
-    body: "Paid into your business account.",
+    body: "Accept the offer and the money is paid into your business account.",
     image: "/merchant-credit/get-funded.webp",
   },
   {
     title: "Repay the bank",
-    body: "Monthly, directly to Sampath.",
+    body: "Pay the bank back monthly. Your Koko payouts aren't affected.",
     image: "/merchant-credit/repay.webp",
   },
 ];
@@ -219,6 +220,7 @@ export function MerchantCreditV1() {
     const show = () => {
       introDismissed = false;
       setIntroSeen(false);
+      setIntroStep(0);
     };
     window.addEventListener(INTRO_RESET_EVENT, show);
     return () => window.removeEventListener(INTRO_RESET_EVENT, show);
@@ -226,8 +228,10 @@ export function MerchantCreditV1() {
   const dismissIntro = () => {
     introDismissed = true;
     setIntroSeen(true);
+    setIntroStep(0);
   };
   const [howOpen, setHowOpen] = useState(false);
+  const [introStep, setIntroStep] = useState(0);
   const cancelAction = useAction();
   useEffect(() => {
     if (!freshLoad) return;
@@ -313,7 +317,7 @@ export function MerchantCreditV1() {
       <V1Page>
         <PageHeader
           title="Merchant credit"
-          description="Funding for your business from Koko and our partner bank."
+          description="Business funding from partner banks. Koko helps you apply."
         />
         <div className="space-y-4" aria-busy="true" aria-label="Loading merchant credit">
           <SkeletonBlock className="h-11 w-64" />
@@ -401,7 +405,7 @@ export function MerchantCreditV1() {
     <V1Page>
       <PageHeader
         title="Merchant credit"
-        description="Funding for your business from Koko and our partner bank."
+        description="Business funding from partner banks. Koko helps you apply."
         actions={
           <Btn
             variant="tertiary"
@@ -428,40 +432,85 @@ export function MerchantCreditV1() {
           {!introSeen && (
             <section
               aria-labelledby="mc-intro"
-              className="rounded-2xl border border-[#BDDCEE] bg-[#f1f7fb] p-5 sm:p-6"
+              className="relative overflow-hidden rounded-2xl border border-[#BDDCEE] bg-[#f1f7fb]"
             >
-              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                <h2 id="mc-intro" className="text-base text-gray-900">
-                  How merchant credit works
-                </h2>
-                <p className="text-sm text-gray-700">Sampath Bank lends. Koko helps you apply.</p>
-              </div>
-              <ol className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-                {HOW_STEPS.map((item, index) => (
-                  <li key={item.title} className="rounded-xl bg-white p-3 text-center">
-                    <img
-                      src={item.image}
-                      alt=""
-                      width={240}
-                      height={240}
-                      loading="lazy"
-                      className="mx-auto aspect-square w-full max-w-[160px] object-contain"
-                    />
-                    <p className="mt-2 text-sm font-semibold text-gray-900">
-                      <span className="sr-only">Step {index + 1}: </span>
-                      {item.title}
+              <Btn
+                variant="tertiary"
+                size="sm"
+                className="absolute right-2 top-2 z-10 w-11 px-0 sm:w-9"
+                aria-label="Close introduction"
+                onClick={dismissIntro}
+              >
+                <X aria-hidden="true" />
+              </Btn>
+              <div className="grid items-center gap-6 p-5 sm:p-6 md:grid-cols-[240px_minmax(0,1fr)] md:gap-8 md:p-8">
+                <img
+                  key={HOW_STEPS[introStep].image}
+                  src={HOW_STEPS[introStep].image}
+                  alt=""
+                  width={240}
+                  height={240}
+                  className="mx-auto aspect-square w-full max-w-[200px] rounded-2xl bg-white object-contain motion-safe:animate-in motion-safe:fade-in md:max-w-[240px]"
+                />
+                <div className="min-w-0">
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <span id="mc-intro">How merchant credit works</span>
+                    <span aria-hidden="true"> · </span>
+                    <span className="normal-case tracking-normal">
+                      {introStep + 1} of {HOW_STEPS.length}
+                    </span>
+                  </p>
+                  <div aria-live="polite">
+                    <h2 className="mt-2 text-xl text-gray-900">{HOW_STEPS[introStep].title}</h2>
+                    <p className="mt-1 max-w-md text-sm text-gray-700">
+                      {HOW_STEPS[introStep].body}
                     </p>
-                    <p className="text-xs text-muted-foreground">{item.body}</p>
-                  </li>
-                ))}
-              </ol>
-              <div className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1">
-                <Btn variant="secondary" onClick={dismissIntro}>
-                  Got it
-                </Btn>
-                <Btn variant="tertiary" onClick={() => setHowOpen(true)}>
-                  Learn more
-                </Btn>
+                  </div>
+                  <div className="mt-5 flex gap-1.5" role="group" aria-label="Steps">
+                    {HOW_STEPS.map((item, index) => (
+                      <button
+                        key={item.title}
+                        type="button"
+                        aria-label={`Step ${index + 1}: ${item.title}`}
+                        aria-current={index === introStep ? "step" : undefined}
+                        onClick={() => setIntroStep(index)}
+                        className="flex h-6 items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
+                      >
+                        <span
+                          className={cn(
+                            "block h-1.5 rounded-full transition-all",
+                            index === introStep ? "w-6 bg-gray-900" : "w-1.5 bg-gray-400",
+                          )}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-5 flex flex-wrap items-center gap-2">
+                    {introStep > 0 && (
+                      <Btn variant="tertiary" onClick={() => setIntroStep(introStep - 1)}>
+                        Back
+                      </Btn>
+                    )}
+                    {introStep < HOW_STEPS.length - 1 ? (
+                      <Btn onClick={() => setIntroStep(introStep + 1)}>
+                        Next
+                        <ArrowRight aria-hidden="true" />
+                      </Btn>
+                    ) : canManage && eligibility.eligible && !activeFor("sampath") ? (
+                      <Btn
+                        onClick={() => {
+                          dismissIntro();
+                          startApplication("sampath");
+                        }}
+                      >
+                        Get started
+                        <ArrowRight aria-hidden="true" />
+                      </Btn>
+                    ) : (
+                      <Btn onClick={dismissIntro}>Done</Btn>
+                    )}
+                  </div>
+                </div>
               </div>
             </section>
           )}
@@ -914,7 +963,7 @@ export function MerchantCreditV1() {
         open={howOpen}
         onOpenChange={setHowOpen}
         title="How merchant credit works"
-        description="Business funding from Sampath Bank, applied for through Koko."
+        description="Business funding from partner banks. Koko helps you apply."
         footer={
           canManage && eligibility.eligible && !activeFor("sampath") ? (
             <Btn
