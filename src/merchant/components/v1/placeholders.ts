@@ -225,7 +225,7 @@ export const SECURITY_OPTIONS = [
 // Koko sales history used for eligibility (two demo scenarios).
 export const KOKO_SALES = {
   eligible: { monthsOnKoko: 14, monthly: [380000, 410000, 395000, 450000, 470000, 420000] },
-  "not-eligible": { monthsOnKoko: 4, monthly: [0, 0, 120000, 160000, 210000, 230000] },
+  "not-eligible": { monthsOnKoko: 9, monthly: [95000, 110000, 120000, 140000, 155000, 180000] },
 };
 
 // Banks shown as coming soon in Merchant credit.

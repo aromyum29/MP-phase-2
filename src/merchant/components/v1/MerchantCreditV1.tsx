@@ -67,7 +67,7 @@ import {
   type TimelineItem,
 } from "./ui";
 import { firstChangeStep, resubmitDraft } from "./scenarios";
-import { useOptionalParam, useSetSearch, useViewParam } from "./url";
+import { VIEW_KEYS, useOptionalParam, useSetSearch, useViewParam } from "./url";
 
 type AnyLoan = LoanRequest | CancelledLoanRequest;
 const STEPS = ["Credit needs", "Business details", "Finances and documents", "Review and submit"];
@@ -352,10 +352,6 @@ export function MerchantCreditV1() {
             const active = activeFor(lender.id);
             const draft = data.loanDrafts[lender.id];
             const open = detailsOpen === lender.id;
-            const unmet = [
-              !eligibility.monthsOk && `${terms.minMonths} months selling with Koko`,
-              !eligibility.salesOk && `${lkr(terms.minMonthlySales)} average monthly Koko sales`,
-            ].filter(Boolean);
             return (
               <Card key={lender.id} aria-label={lender.name} className="p-5 sm:p-8">
                 <div className="flex flex-wrap items-center gap-3">
@@ -384,6 +380,10 @@ export function MerchantCreditV1() {
                   ))}
                 </dl>
 
+                {!active && !eligibility.eligible && (
+                  <EligibilityProgress eligibility={eligibility} />
+                )}
+
                 <div className="mt-7 flex flex-wrap items-center gap-x-4 gap-y-3">
                   {active ? (
                     <Btn size="lg" variant="secondary" onClick={() => setOpenId(active.id)}>
@@ -395,10 +395,18 @@ export function MerchantCreditV1() {
                       Only Super Admins and Finance Admins can apply for merchant credit.
                     </p>
                   ) : !eligibility.eligible ? (
-                    <p className="text-sm text-muted-foreground">
-                      <span className="font-medium text-gray-900">Not eligible yet.</span> You need{" "}
-                      {unmet.join(" and ")}.
-                    </p>
+                    <Btn
+                      size="lg"
+                      variant="secondary"
+                      onClick={() =>
+                        setSearch({
+                          ...Object.fromEntries(VIEW_KEYS.map((key) => [key, null])),
+                          page: null,
+                        })
+                      }
+                    >
+                      Create an order
+                    </Btn>
                   ) : draft ? (
                     discarding === lender.id ? (
                       <DiscardConfirm
@@ -842,6 +850,71 @@ function DiscardConfirm({ onDiscard, onKeep }: { onDiscard: () => void; onKeep: 
         Keep
       </Btn>
     </div>
+  );
+}
+
+// Not eligible yet: what the bank needs, and how close the business is.
+function EligibilityProgress({ eligibility }: { eligibility: ReturnType<typeof useEligibility> }) {
+  const { terms } = eligibility;
+  const salesGap = Math.max(0, terms.minMonthlySales - eligibility.average);
+  const rows = [
+    {
+      label: "Average monthly Koko sales",
+      value: `${lkr(eligibility.average)} of ${lkr(terms.minMonthlySales)}`,
+      ratio: eligibility.average / terms.minMonthlySales,
+      ok: eligibility.salesOk,
+    },
+    {
+      label: "Time selling with Koko",
+      value: `${Math.min(eligibility.months, terms.minMonths)} of ${terms.minMonths} months`,
+      ratio: eligibility.months / terms.minMonths,
+      ok: eligibility.monthsOk,
+    },
+  ];
+  return (
+    <section
+      aria-labelledby="mc-eligibility"
+      className="mt-7 rounded-xl border border-amber-200 bg-amber-50/60 p-4 sm:p-5"
+    >
+      <h3 id="mc-eligibility" className="text-sm font-semibold text-gray-900">
+        You're not eligible for merchant credit yet
+      </h3>
+      <p className="mt-1 text-sm text-gray-700">
+        {`You can apply once your business takes ${lkr(terms.minMonthlySales)} a month through Koko, on average over the last 6 months.`}
+        {salesGap > 0 && ` That's ${lkr(salesGap)} more a month than now.`}
+      </p>
+      <ul className="mt-4 space-y-4">
+        {rows.map((row) => (
+          <li key={row.label}>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm">
+              <span className="font-medium text-gray-900">{row.label}</span>
+              <span className="flex items-center gap-1.5 tabular-nums text-gray-700">
+                {row.ok && <CheckCircle2 className="h-4 w-4 text-emerald-700" aria-hidden="true" />}
+                {row.value}
+                {row.ok && <span className="sr-only">, met</span>}
+              </span>
+            </div>
+            <div
+              role="progressbar"
+              aria-label={row.label}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(Math.min(1, row.ratio) * 100)}
+              aria-valuetext={row.value}
+              className="mt-2 h-2 overflow-hidden rounded-full bg-white ring-1 ring-inset ring-amber-200"
+            >
+              <div
+                className={cn("h-full rounded-full", row.ok ? "bg-emerald-600" : "bg-amber-500")}
+                style={{ width: `${Math.round(Math.min(1, row.ratio) * 100)}%` }}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-4 text-xs text-muted-foreground">
+        Keep taking payments with Koko. We'll let you know as soon as you qualify.
+      </p>
+    </section>
   );
 }
 

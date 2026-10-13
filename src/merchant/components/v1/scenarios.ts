@@ -6,6 +6,7 @@ import {
   type LoanRequest,
 } from "../FinanceData";
 import { BUSINESS, CURRENT_USER } from "./placeholders";
+import { useDemo } from "./demo";
 import { VIEW_KEYS, useSetSearch } from "./url";
 
 // Main UI demo scenarios, listed under Scenarios in the Version switcher.
@@ -16,6 +17,11 @@ export const SCENARIOS: Scenario[] = [
     id: "credit-changes-requested",
     label: "Merchant credit: changes requested",
     description: "Sampath Bank sent a request back with changes to make",
+  },
+  {
+    id: "credit-not-eligible",
+    label: "Merchant credit: not eligible yet",
+    description: "Koko sales are below what the bank needs",
   },
 ];
 
@@ -82,9 +88,26 @@ export const firstChangeStep = (request: Pick<LoanRequest, "changes">) =>
 
 export function useRunScenario() {
   const { setData } = useFinanceData();
+  const { update } = useDemo();
   const setSearch = useSetSearch();
+  const clear = Object.fromEntries(VIEW_KEYS.map((key) => [key, null]));
   return (id: string) => {
+    if (id === "credit-not-eligible") {
+      update({ eligibility: "not-eligible", role: "Super Admin" });
+      setData((previous) => {
+        const drafts = { ...previous.loanDrafts };
+        delete drafts.sampath;
+        return {
+          ...previous,
+          loanDrafts: drafts,
+          loans: previous.loans.filter((loan) => loan.bankId !== "sampath"),
+        };
+      });
+      setSearch({ ...clear, page: "merchant-loans" });
+      return;
+    }
     if (id !== "credit-changes-requested") return;
+    update({ eligibility: "eligible", role: "Super Admin" });
     const request = changesRequested();
     setData((previous) => {
       return {
@@ -97,7 +120,7 @@ export function useRunScenario() {
       };
     });
     setSearch({
-      ...Object.fromEntries(VIEW_KEYS.map((key) => [key, null])),
+      ...clear,
       page: "merchant-loans",
       apply: request.bankId,
       step: String(firstChangeStep(request) + 1),
