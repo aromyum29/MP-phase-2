@@ -66,6 +66,7 @@ import {
   statusLabel,
   type TimelineItem,
 } from "./ui";
+import { firstChangeStep, resubmitDraft } from "./scenarios";
 import { useOptionalParam, useSetSearch, useViewParam } from "./url";
 
 type AnyLoan = LoanRequest | CancelledLoanRequest;
@@ -207,12 +208,16 @@ export function MerchantCreditV1() {
   const resubmit = (request: AnyLoan) => {
     setData((previous) => ({
       ...previous,
-      loanDrafts: {
-        ...previous.loanDrafts,
-        [request.bankId]: { ...request.form, statements: "", accounts: "", resubmitOf: request.id },
-      },
+      loanDrafts: { ...previous.loanDrafts, [request.bankId]: resubmitDraft(request) },
     }));
-    startApplication(request.bankId, Math.min(...(request.changes ?? []).map((c) => c.step)));
+    startApplication(request.bankId, firstChangeStep(request));
+  };
+  // Requests the bank sent back open straight in the form, with the changes
+  // highlighted, for people who can apply. Everyone else sees the details.
+  const openRequest = (request: AnyLoan) => {
+    if (needsChanges(request) && canManage && eligibility.eligible && !activeFor(request.bankId))
+      resubmit(request);
+    else setOpenId(request.id);
   };
   const cancelRequest = async (id: string) => {
     const ok = await cancelAction.run(() =>
@@ -647,7 +652,7 @@ export function MerchantCreditV1() {
                             variant="tertiary"
                             size="sm"
                             aria-label={`View, ${request.id}`}
-                            onClick={() => setOpenId(request.id)}
+                            onClick={() => openRequest(request)}
                           >
                             View
                           </Btn>
@@ -662,7 +667,7 @@ export function MerchantCreditV1() {
                   <li key={request.id}>
                     <button
                       type="button"
-                      onClick={() => setOpenId(request.id)}
+                      onClick={() => openRequest(request)}
                       className={cn(
                         SURFACE_LIGHT,
                         "w-full space-y-3 p-4 text-left transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900",
@@ -970,18 +975,38 @@ function LoanDetail({ request, onRestart }: { request: AnyLoan; onRestart?: () =
   );
 }
 
-function ChangeList({ changes }: { changes: NonNullable<LoanRequest["changes"]> }) {
+type Change = NonNullable<LoanRequest["changes"]>[number];
+function ChangeList({
+  changes,
+  resolved,
+}: {
+  changes: Change[];
+  resolved?: (change: Change) => boolean;
+}) {
   return (
     <ol className="mt-3 space-y-2">
-      {changes.map((change, index) => (
-        <li key={change.title} className="flex gap-2">
-          <span className="font-semibold">{index + 1}.</span>
-          <span>
-            <span className="block font-semibold">{change.title}</span>
-            <span className="block">{change.note}</span>
-          </span>
-        </li>
-      ))}
+      {changes.map((change, index) => {
+        const done = resolved?.(change);
+        return (
+          <li key={change.title} className="flex gap-2">
+            <span className="font-semibold">{index + 1}.</span>
+            <span>
+              <span className="flex flex-wrap items-center gap-x-2 font-semibold">
+                <span className={cn(done && "line-through decoration-amber-700/60")}>
+                  {change.title}
+                </span>
+                {done && (
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-800 no-underline">
+                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    Updated
+                  </span>
+                )}
+              </span>
+              <span className="block">{change.note}</span>
+            </span>
+          </li>
+        );
+      })}
     </ol>
   );
 }
@@ -1082,6 +1107,18 @@ function Application({
   const stepChanges = (resubmitted?.changes ?? []).filter(
     (change) => step === 3 || change.step === step,
   );
+  // A requested change is done once any of its fields differs from the request
+  // the bank sent back (statements: once a new file is attached).
+  const resolved = (change: Change) =>
+    (change.fields ?? []).some((field) =>
+      field === "mc-statements"
+        ? Boolean(files.statements)
+        : form[field.replace("mc-", "") as keyof LoanForm] !==
+          resubmitted?.form[field.replace("mc-", "") as keyof LoanForm],
+    );
+  const attentionFor = (field: string) =>
+    resubmitted?.changes?.find((change) => change.fields?.includes(field) && !resolved(change))
+      ?.title;
   const errorsFor = (index: number) => {
     const next: Record<string, string> = {};
     if (index === 0) {
@@ -1241,7 +1278,7 @@ function Application({
                   : `${bank} asked you to change this`
               }
             >
-              <ChangeList changes={stepChanges} />
+              <ChangeList changes={stepChanges} resolved={resolved} />
             </InlineAlert>
           </div>
         )}
@@ -1254,6 +1291,7 @@ function Application({
             <div className="space-y-3">
               <CurrencyInput
                 id="mc-amount"
+                attention={attentionFor("mc-amount")}
                 label="Amount"
                 value={form.amount}
                 onChange={(value) => update("amount", value)}
@@ -1290,6 +1328,7 @@ function Application({
             </div>
             <SelectInput
               id="mc-purpose"
+              attention={attentionFor("mc-purpose")}
               label="What's it for?"
               placeholder="Choose a purpose"
               value={form.purpose}
@@ -1318,6 +1357,7 @@ function Application({
             )}
             <SelectInput
               id="mc-term"
+              attention={attentionFor("mc-term")}
               label="Repayment period"
               placeholder="Choose a period"
               hint="The bank confirms the final term."
@@ -1334,6 +1374,7 @@ function Application({
             />
             <SelectInput
               id="mc-security"
+              attention={attentionFor("mc-security")}
               label="Security you can offer"
               placeholder="Choose security"
               hint="Security can help with larger amounts. Choose No security for an unsecured request."
@@ -1370,6 +1411,7 @@ function Application({
             </section>
             <SelectInput
               id="mc-employees"
+              attention={attentionFor("mc-employees")}
               label="Number of employees"
               placeholder="Choose a range"
               value={form.employees ?? ""}
@@ -1384,6 +1426,7 @@ function Application({
             <div className="grid gap-7 sm:grid-cols-2 sm:gap-5">
               <TextInput
                 id="mc-contact"
+                attention={attentionFor("mc-contact")}
                 label="Contact person"
                 autoComplete="name"
                 value={form.contact}
@@ -1393,6 +1436,7 @@ function Application({
               />
               <TextInput
                 id="mc-designation"
+                attention={attentionFor("mc-designation")}
                 label="Their role"
                 autoComplete="organization-title"
                 value={form.designation ?? ""}
@@ -1404,6 +1448,7 @@ function Application({
             <div className="grid gap-7 sm:grid-cols-2 sm:gap-5">
               <TextInput
                 id="mc-phone"
+                attention={attentionFor("mc-phone")}
                 label="Mobile number"
                 type="tel"
                 inputMode="tel"
@@ -1415,6 +1460,7 @@ function Application({
               />
               <TextInput
                 id="mc-email"
+                attention={attentionFor("mc-email")}
                 label="Email"
                 type="email"
                 autoComplete="email"
@@ -1431,6 +1477,7 @@ function Application({
           <div className="flex flex-col gap-7">
             <CurrencyInput
               id="mc-revenue"
+              attention={attentionFor("mc-revenue")}
               label="Average monthly revenue"
               value={form.revenue}
               onChange={(value) => update("revenue", value)}
@@ -1456,6 +1503,7 @@ function Application({
               <>
                 <TextInput
                   id="mc-lender"
+                  attention={attentionFor("mc-lender")}
                   label="Bank or lender"
                   value={form.lender ?? ""}
                   onChange={(event) => update("lender", event.target.value)}
@@ -1466,6 +1514,7 @@ function Application({
                 <div className="grid gap-7 sm:grid-cols-2 sm:gap-5">
                   <CurrencyInput
                     id="mc-repayments"
+                    attention={attentionFor("mc-repayments")}
                     label="Total monthly repayments"
                     value={form.repayments}
                     onChange={(value) => update("repayments", value)}
@@ -1474,6 +1523,7 @@ function Application({
                   />
                   <CurrencyInput
                     id="mc-outstanding"
+                    attention={attentionFor("mc-outstanding")}
                     label="Total still owed"
                     value={form.outstanding ?? ""}
                     onChange={(value) => update("outstanding", value)}
@@ -1501,6 +1551,7 @@ function Application({
               </ul>
               <FileDrop
                 id="mc-statements"
+                attention={attentionFor("mc-statements")}
                 label="Bank statements for the last 6 months"
                 hint="One PDF with all 6 months, from the account your business uses most."
                 file={files.statements ?? null}
@@ -1510,10 +1561,11 @@ function Application({
                 onReject={(message) =>
                   setFileErrors((previous) => ({ ...previous, statements: message }))
                 }
-                maxBytes={10 * 1024 * 1024}
+                maxBytes={10_000_000}
               />
               <FileDrop
                 id="mc-accounts"
+                attention={attentionFor("mc-accounts")}
                 label="Latest financial statements (optional)"
                 hint="Audited accounts or management accounts. They can help the bank decide faster."
                 file={files.accounts ?? null}
@@ -1523,7 +1575,7 @@ function Application({
                 onReject={(message) =>
                   setFileErrors((previous) => ({ ...previous, accounts: message }))
                 }
-                maxBytes={10 * 1024 * 1024}
+                maxBytes={10_000_000}
               />
             </section>
           </div>

@@ -1,15 +1,21 @@
-import { emptyLoan, reference, useFinanceData, type LoanRequest } from "../FinanceData";
+import {
+  emptyLoan,
+  reference,
+  useFinanceData,
+  type LoanForm,
+  type LoanRequest,
+} from "../FinanceData";
 import { BUSINESS, CURRENT_USER } from "./placeholders";
 import { VIEW_KEYS, useSetSearch } from "./url";
 
 // Main UI demo scenarios, listed under Scenarios in the Version switcher.
-// Each one loads sample data and opens the page where it can be seen.
+// Each one loads sample data and opens the view where it can be seen.
 export type Scenario = { id: string; label: string; description: string };
 export const SCENARIOS: Scenario[] = [
   {
     id: "credit-changes-requested",
     label: "Merchant credit: changes requested",
-    description: "Sampath Bank declined a request and asked for changes",
+    description: "Sampath Bank sent a request back with changes to make",
   },
 ];
 
@@ -27,11 +33,13 @@ function changesRequested(): LoanRequest {
     changes: [
       {
         step: 0,
+        fields: ["mc-amount", "mc-security"],
         title: "Lower the amount or offer security",
         note: "Up to LKR 1,700,000 can be approved without security. For LKR 3,500,000, offer a fixed deposit or property.",
       },
       {
         step: 2,
+        fields: ["mc-statements"],
         title: "Add the missing bank statements",
         note: "The statements cover April to July. Add August and September so all 6 months are included.",
       },
@@ -61,6 +69,17 @@ function changesRequested(): LoanRequest {
   };
 }
 
+// A new draft prefilled from a request the bank sent back. Statements must be
+// attached again; the first step with a requested change is where to start.
+export const resubmitDraft = (request: Pick<LoanRequest, "id" | "form">): LoanForm => ({
+  ...request.form,
+  statements: "",
+  accounts: "",
+  resubmitOf: request.id,
+});
+export const firstChangeStep = (request: Pick<LoanRequest, "changes">) =>
+  Math.min(...(request.changes ?? [{ step: 0 }]).map((change) => change.step));
+
 export function useRunScenario() {
   const { setData } = useFinanceData();
   const setSearch = useSetSearch();
@@ -68,11 +87,9 @@ export function useRunScenario() {
     if (id !== "credit-changes-requested") return;
     const request = changesRequested();
     setData((previous) => {
-      const drafts = { ...previous.loanDrafts };
-      delete drafts[request.bankId];
       return {
         ...previous,
-        loanDrafts: drafts,
+        loanDrafts: { ...previous.loanDrafts, [request.bankId]: resubmitDraft(request) },
         loans: [request, ...previous.loans.filter((loan) => loan.bankId !== request.bankId)],
         cancelledLoans: (previous.cancelledLoans ?? []).filter(
           (loan) => loan.bankId !== request.bankId,
@@ -82,8 +99,8 @@ export function useRunScenario() {
     setSearch({
       ...Object.fromEntries(VIEW_KEYS.map((key) => [key, null])),
       page: "merchant-loans",
-      tab: "requests",
-      request: request.id,
+      apply: request.bankId,
+      step: String(firstChangeStep(request) + 1),
     });
   };
 }

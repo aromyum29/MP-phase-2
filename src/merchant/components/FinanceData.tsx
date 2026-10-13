@@ -39,7 +39,8 @@ export type LoanRequest = {
   reason?: string;
   offer?: { amount: string; term: string; rate: string };
   // Main UI: what the bank asks to change before it reviews again (step is the form step).
-  changes?: Array<{ step: number; title: string; note: string }>;
+  // fields: form field ids to highlight until they change.
+  changes?: Array<{ step: number; title: string; note: string; fields?: string[] }>;
   consent?: { crib: boolean; authorised: boolean; at: string; by: string };
 };
 export type BankRequest = {

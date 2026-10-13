@@ -687,18 +687,26 @@ export function FilterChips({
 
 /* ---------- Form fields ---------- */
 
-export const describedBy = (id: string, { hint, error }: { hint?: ReactNode; error?: string }) =>
-  [error && `${id}-error`, hint && `${id}-hint`].filter(Boolean).join(" ") || undefined;
+export const describedBy = (
+  id: string,
+  { hint, error, attention }: { hint?: ReactNode; error?: string; attention?: string },
+) =>
+  [error && `${id}-error`, !error && attention && `${id}-attention`, hint && `${id}-hint`]
+    .filter(Boolean)
+    .join(" ") || undefined;
 
 // Soft fields are grey while empty and turn white once filled or focused.
-export const fieldClass = (error?: string, soft = false, filled = false) =>
+// Attention marks a field someone (e.g. the bank) asked the merchant to change.
+export const fieldClass = (error?: string, soft = false, filled = false, attention = false) =>
   soft
     ? cn(
         "h-[44px] w-full rounded-lg border px-4 text-[16px] text-gray-800 transition-colors placeholder:text-gray-600 focus:bg-white focus:outline-none focus:ring-2 sm:h-12 sm:text-base",
         error || filled ? "bg-white" : "bg-[#f3f3f5]",
         error
           ? "border-[#b4232f] focus:ring-[#b4232f]/20"
-          : "border-[#8e8e9a] hover:border-gray-600 focus:border-gray-900 focus:ring-gray-900/20",
+          : attention
+            ? "border-amber-500 bg-amber-50/60 ring-2 ring-amber-200 focus:border-amber-600 focus:ring-amber-300"
+            : "border-[#8e8e9a] hover:border-gray-600 focus:border-gray-900 focus:ring-gray-900/20",
       )
     : cn(
         "h-11 w-full rounded-lg border bg-white px-3 text-[16px] text-foreground transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-2 sm:h-10 sm:text-sm",
@@ -717,11 +725,25 @@ export function FieldError({ id, error }: { id: string; error?: string }) {
   );
 }
 
+export function FieldAttention({ id, note }: { id: string; note?: string }) {
+  if (!note) return null;
+  return (
+    <p
+      id={`${id}-attention`}
+      className="flex items-start gap-1.5 text-xs font-medium text-amber-800"
+    >
+      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      {note}
+    </p>
+  );
+}
+
 export function FieldShell({
   id,
   label,
   hint,
   error,
+  attention,
   optional,
   aside,
   children,
@@ -730,6 +752,7 @@ export function FieldShell({
   label: ReactNode;
   hint?: ReactNode;
   error?: string;
+  attention?: string;
   optional?: boolean;
   aside?: ReactNode;
   children: ReactNode;
@@ -747,6 +770,7 @@ export function FieldShell({
         </div>
         {children}
         <FieldError id={id} error={error} />
+        {!error && <FieldAttention id={id} note={attention} />}
         {hint && (
           <p id={`${id}-hint`} className="text-xs text-muted-foreground">
             {hint}
@@ -784,14 +808,23 @@ type TextInputProps = Omit<ComponentProps<"input">, "prefix"> & {
   aside?: ReactNode;
   prefix?: string;
   locked?: boolean;
+  attention?: string;
 };
 export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function TextInput(
-  { id, label, hint, error, optional, aside, prefix, locked, className, ...input },
+  { id, label, hint, error, attention, optional, aside, prefix, locked, className, ...input },
   ref,
 ) {
   const soft = useSoft();
   return (
-    <FieldShell id={id} label={label} hint={hint} error={error} optional={optional} aside={aside}>
+    <FieldShell
+      id={id}
+      label={label}
+      hint={hint}
+      error={error}
+      attention={attention}
+      optional={optional}
+      aside={aside}
+    >
       <div className="relative">
         {prefix && (
           <span
@@ -809,12 +842,13 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
           id={id}
           readOnly={locked || input.readOnly}
           aria-invalid={error ? true : undefined}
-          aria-describedby={describedBy(id, { hint, error })}
+          aria-describedby={describedBy(id, { hint, error, attention })}
           className={cn(
             fieldClass(
               error,
               soft,
               input.value !== undefined && input.value !== null && String(input.value) !== "",
+              Boolean(attention),
             ),
             prefix && (soft ? "pl-14" : "pl-12"),
             locked && "cursor-default border-dashed bg-[#f6f6f8] pr-10",
@@ -872,11 +906,13 @@ export function SelectInput({
   onChange,
   options,
   placeholder = "Choose an option",
+  attention,
 }: {
   id: string;
   label: ReactNode;
   hint?: ReactNode;
   error?: string;
+  attention?: string;
   optional?: boolean;
   value: string;
   onChange: (value: string) => void;
@@ -885,16 +921,23 @@ export function SelectInput({
 }) {
   const soft = useSoft();
   return (
-    <FieldShell id={id} label={label} hint={hint} error={error} optional={optional}>
+    <FieldShell
+      id={id}
+      label={label}
+      hint={hint}
+      error={error}
+      attention={attention}
+      optional={optional}
+    >
       <div className="relative">
         <select
           id={id}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           aria-invalid={error ? true : undefined}
-          aria-describedby={describedBy(id, { hint, error })}
+          aria-describedby={describedBy(id, { hint, error, attention })}
           className={cn(
-            fieldClass(error, soft, Boolean(value)),
+            fieldClass(error, soft, Boolean(value), Boolean(attention)),
             "appearance-none pr-10",
             !value && "text-muted-foreground",
           )}
@@ -1116,6 +1159,7 @@ export function FileDrop({
   onRemove,
   onReject,
   maxBytes = 5 * 1024 * 1024,
+  attention,
 }: {
   id: string;
   label: string;
@@ -1126,6 +1170,7 @@ export function FileDrop({
   onRemove: () => void;
   onReject: (message: string) => void;
   maxBytes?: number;
+  attention?: string;
 }) {
   const [over, setOver] = useState(false);
   const soft = useSoft();
@@ -1195,7 +1240,7 @@ export function FileDrop({
         accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
         className="peer sr-only"
         aria-labelledby={`${id}-label`}
-        aria-describedby={describedBy(id, { hint, error })}
+        aria-describedby={describedBy(id, { hint, error, attention })}
         aria-invalid={error ? true : undefined}
         onChange={(event) => {
           take(event.target.files?.[0]);
@@ -1352,9 +1397,11 @@ export function FileDrop({
               ? "border-gray-900 bg-gray-50"
               : error
                 ? "border-[#b4232f] bg-red-50/40"
-                : soft
-                  ? "border-[#8e8e9a] bg-[#f3f3f5] hover:bg-[#ececf0]"
-                  : "border-[#6B7280] bg-[#fafafb] hover:bg-gray-50",
+                : attention
+                  ? "border-amber-500 bg-amber-50/60 ring-2 ring-amber-200"
+                  : soft
+                    ? "border-[#8e8e9a] bg-[#f3f3f5] hover:bg-[#ececf0]"
+                    : "border-[#6B7280] bg-[#fafafb] hover:bg-gray-50",
           )}
         >
           <UploadCloud className="mb-1 h-6 w-6 text-muted-foreground" aria-hidden="true" />
@@ -1372,6 +1419,7 @@ export function FileDrop({
         </label>
       )}
       <FieldError id={id} error={error} />
+      {!error && <FieldAttention id={id} note={attention} />}
       {soft && hintText}
     </div>
   );
