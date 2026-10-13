@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
-import { ArrowDown, ArrowRight, CheckCircle2, ChevronRight, Lock } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
+import { ArrowRight, CheckCircle2, ChevronRight, Lock } from "lucide-react";
 import { BankLogo } from "../BankLogo";
 import { cn } from "../ui/utils";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "../ui/input-otp";
@@ -658,62 +658,54 @@ export function BankAccountV1() {
           }
         >
           <div className="flex flex-col gap-7">
-            <div className="grid items-stretch gap-3 md:grid-cols-[1fr_auto_1fr]">
-              <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
-                <h3 className={labelClass}>From</h3>
-                <div className="mt-3 flex items-center gap-3">
-                  <BankLogo bank={data.account.bank} />
-                  <div className="min-w-0">
-                    <p className="text-base font-semibold text-gray-900">
-                      {accountLabel(data.account)}
-                    </p>
-                    <p className="text-sm text-muted-foreground">{data.account.branch}</p>
-                  </div>
-                </div>
-              </div>
-              <div
-                className="flex items-center justify-center text-muted-foreground"
-                aria-hidden="true"
-              >
-                <ArrowRight className="hidden h-5 w-5 md:block" />
-                <ArrowDown className="h-5 w-5 md:hidden" />
-              </div>
-              <div className="rounded-xl border border-gray-900 bg-white p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className={labelClass}>To</h3>
+            <dl className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200">
+              <SummaryRow label="From">
+                <AccountLine
+                  bank={data.account.bank}
+                  title={accountLabel(data.account)}
+                  detail={`${data.account.branch} branch`}
+                />
+              </SummaryRow>
+              <SummaryRow
+                label="To"
+                action={
                   <Btn
                     variant="tertiary"
                     size="sm"
-                    className="-mr-2 -mt-2 text-sm"
+                    className="-my-1 -mr-2"
                     onClick={() => setView("details")}
                     aria-label="Edit, new account details"
                   >
                     Edit
                   </Btn>
-                </div>
-                <div className="mt-1 flex items-center gap-3">
-                  <BankLogo bank={bankDraft.bank} />
-                  <div className="min-w-0">
-                    <p className="text-base font-semibold text-gray-900">{bankDraft.bank}</p>
-                    <p className="text-base font-medium tabular-nums text-gray-900">
-                      {group(digits)}
-                    </p>
-                    <p className="text-sm text-muted-foreground">{bankDraft.branch}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <dl className="grid gap-x-8 gap-y-4 rounded-xl border border-gray-200 p-4 sm:grid-cols-2">
-              <div className="min-w-0">
-                <dt className={labelClass}>Account holder</dt>
-                <dd className={valueClass}>{BUSINESS.name}</dd>
-              </div>
-              <div className="min-w-0">
-                <dt className={labelClass}>Bank statement</dt>
-                <dd className={cn(valueClass, "break-words")}>
-                  {statement ? `${statement.name} · ${fileSize(statement.size)}` : "Not attached"}
-                </dd>
-              </div>
+                }
+              >
+                <AccountLine
+                  bank={bankDraft.bank}
+                  title={
+                    <>
+                      {bankDraft.bank}{" "}
+                      <span className="whitespace-nowrap tabular-nums">{group(digits)}</span>
+                    </>
+                  }
+                  detail={`${bankDraft.branch} branch`}
+                />
+              </SummaryRow>
+              <SummaryRow label="Account holder">{BUSINESS.name}</SummaryRow>
+              <SummaryRow label="Bank statement">
+                {statement ? (
+                  <span className="flex min-w-0 items-baseline gap-2">
+                    <span className="truncate" title={statement.name}>
+                      {statement.name}
+                    </span>
+                    <span className="shrink-0 text-xs font-normal text-muted-foreground">
+                      {fileSize(statement.size)}
+                    </span>
+                  </span>
+                ) : (
+                  "Not attached"
+                )}
+              </SummaryRow>
             </dl>
             <section aria-labelledby="ba-next">
               <h3 id="ba-next" className="mb-4 text-sm font-semibold text-gray-900">
@@ -825,6 +817,10 @@ export function BankAccountV1() {
                 </InputOTPGroup>
               </InputOTP>
               <FieldError id="ba-otp" error={codeError} />
+              <p className="text-xs text-muted-foreground">
+                Demo: use code{" "}
+                <span className="font-mono font-semibold text-gray-900">{DEMO_OTP}</span>
+              </p>
             </div>
             {resendIn > 0 ? (
               <p className="text-xs text-muted-foreground" aria-live="polite">
@@ -941,6 +937,40 @@ export function BankAccountV1() {
         )}
       </Drawer>
     </V1Page>
+  );
+}
+
+// One line of the review summary: label on the left, value (and an optional
+// action) on the right; stacked on small screens.
+function SummaryRow({
+  label,
+  action,
+  children,
+}: {
+  label: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="grid gap-1.5 px-4 py-3.5 sm:grid-cols-[132px_minmax(0,1fr)] sm:items-center sm:gap-4">
+      <dt className="text-sm text-muted-foreground">{label}</dt>
+      <dd className="flex min-w-0 items-center justify-between gap-3 text-sm font-medium text-gray-900">
+        <span className="min-w-0 flex-1">{children}</span>
+        {action}
+      </dd>
+    </div>
+  );
+}
+
+function AccountLine({ bank, title, detail }: { bank: string; title: ReactNode; detail: string }) {
+  return (
+    <span className="flex min-w-0 items-center gap-3">
+      <BankLogo bank={bank} />
+      <span className="min-w-0">
+        <span className="block">{title}</span>
+        <span className="block text-xs font-normal text-muted-foreground">{detail}</span>
+      </span>
+    </span>
   );
 }
 
