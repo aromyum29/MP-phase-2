@@ -1,4 +1,4 @@
-import { ChevronUp, Layers, Component, FlaskConical } from "lucide-react"
+import { ChevronUp, Layers, Component, FlaskConical, PlayCircle } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,12 +11,14 @@ import {
 } from "./ui/dropdown-menu"
 import { usePortalIteration } from "./IterationProvider"
 import { useDemo } from "./v1/demo"
+import { SCENARIOS, useRunScenario } from "./v1/scenarios"
 import { cn } from "./ui/utils"
 
-export function VersionSwitcher({ collapsed = false, onOpenComponents }: { collapsed?: boolean; onOpenComponents?: () => void }) {
+export function VersionSwitcher({ collapsed = false, onOpenComponents, onNavigate }: { collapsed?: boolean; onOpenComponents?: () => void; onNavigate?: () => void }) {
   const { iteration, setIteration } = usePortalIteration()
   const uiName = iteration === "1" ? "Main UI" : "Alternate UI"
   const { setPanelOpen } = useDemo()
+  const runScenario = useRunScenario()
 
   return (
     <DropdownMenu>
@@ -48,7 +50,7 @@ export function VersionSwitcher({ collapsed = false, onOpenComponents }: { colla
         side="top"
         align="start"
         sideOffset={8}
-        className="z-[60] w-60 rounded-xl p-2 shadow-xl"
+        className="z-[60] w-72 rounded-xl p-2 shadow-xl"
       >
         <DropdownMenuLabel className="text-xs text-muted-foreground">Version switcher</DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -70,6 +72,24 @@ export function VersionSwitcher({ collapsed = false, onOpenComponents }: { colla
           <DropdownMenuItem onSelect={onOpenComponents} className="min-h-11 cursor-pointer gap-2 rounded-lg">
             <Component className="h-4 w-4" />Modular components
           </DropdownMenuItem>
+        </>}
+        {iteration === "1" && <>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="text-xs text-muted-foreground">Scenarios</DropdownMenuLabel>
+          {SCENARIOS.map((scenario) => (
+            <DropdownMenuItem
+              key={scenario.id}
+              onSelect={() => { runScenario(scenario.id); onNavigate?.() }}
+              className="min-h-11 cursor-pointer items-start gap-2 rounded-lg"
+            >
+              <PlayCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span className="flex flex-col">
+                <span>{scenario.label}</span>
+                <span className="text-xs text-muted-foreground">{scenario.description}</span>
+              </span>
+            </DropdownMenuItem>
+          ))}
+          <DropdownMenuSeparator />
         </>}
         {iteration === "1" && (
           <DropdownMenuItem onSelect={() => setPanelOpen(true)} className="min-h-11 cursor-pointer gap-2 rounded-lg">

@@ -778,7 +778,7 @@ export function MerchantPortal({ children, onLogout }: MerchantPortalProps) {
               </nav>
 
               <div className="shrink-0 px-6 pb-4">
-                <VersionSwitcher onOpenComponents={() => { setCurrentPage('modular-components'); setIsMobileMenuOpen(false) }} />
+                <VersionSwitcher onOpenComponents={() => { setCurrentPage('modular-components'); setIsMobileMenuOpen(false) }} onNavigate={() => setIsMobileMenuOpen(false)} />
               </div>
 
               {/* Bottom Section - User */}

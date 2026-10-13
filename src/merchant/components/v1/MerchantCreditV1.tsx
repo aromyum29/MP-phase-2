@@ -101,6 +101,11 @@ const borrowingText = (form: LoanForm) =>
   form.borrowing === "Yes"
     ? `${form.lender || "Yes"} · ${lkr(form.repayments)} a month · ${lkr(form.outstanding || 0)} owed`
     : form.borrowing || "Not given";
+// A declined request with a list of changes reads as "Changes requested".
+const needsChanges = (request: AnyLoan) =>
+  request.status === "Rejected" && Boolean(request.changes?.length);
+const badgeStatus = (request: AnyLoan) =>
+  needsChanges(request) ? "Changes requested" : request.status;
 const bankName = (id: string) =>
   lenders.find((lender) => lender.id === id)?.name ??
   COMING_SOON_BANKS.find((bank) => bank.id === id)?.name ??
@@ -128,8 +133,12 @@ function useEligibility() {
 }
 
 // A reload starts the page fresh: an open application or request closes along
-// with the data (see FinanceDataProvider).
+// with the data (see FinanceDataProvider). Only views restored from the URL the
+// page loaded with are closed, not ones opened later (e.g. by a scenario).
 let freshLoad = true;
+const loadedWithView =
+  typeof window !== "undefined" &&
+  ["apply", "request"].some((key) => new URLSearchParams(window.location.search).has(key));
 
 export function MerchantCreditV1() {
   const { data, setData } = useFinanceData();
@@ -152,7 +161,7 @@ export function MerchantCreditV1() {
   useEffect(() => {
     if (!freshLoad) return;
     freshLoad = false;
-    if (applying || openId)
+    if (loadedWithView && (applying || openId))
       setSearch({ apply: null, step: null, request: null }, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -186,10 +195,22 @@ export function MerchantCreditV1() {
     setDiscarding(null);
     notify("Draft discarded");
   };
-  const startApplication = (bankId: string) => {
+  const startApplication = (bankId: string, startStep = 0) => {
     setReceipt(null);
-    setStep(0);
+    setStep(startStep);
     setApplying(bankId);
+  };
+  // Changes requested: start a new request prefilled from the declined one,
+  // on the first step the bank asked to change. Statements must be added again.
+  const resubmit = (request: AnyLoan) => {
+    setData((previous) => ({
+      ...previous,
+      loanDrafts: {
+        ...previous.loanDrafts,
+        [request.bankId]: { ...request.form, statements: "", accounts: "", resubmitOf: request.id },
+      },
+    }));
+    startApplication(request.bankId, Math.min(...(request.changes ?? []).map((c) => c.step)));
   };
   const cancelRequest = async (id: string) => {
     const ok = await cancelAction.run(() =>
@@ -336,7 +357,7 @@ export function MerchantCreditV1() {
                     <h2 className="text-xl text-gray-900">{lender.name}</h2>
                     <p className="text-sm text-muted-foreground">Business funding through Koko</p>
                   </div>
-                  {active && <StatusBadge status={active.status} />}
+                  {active && <StatusBadge status={badgeStatus(active)} />}
                 </div>
                 <dl className="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-3">
                   {[
@@ -617,7 +638,7 @@ export function MerchantCreditV1() {
                         </td>
                         <td className="whitespace-nowrap px-5 py-3.5">{fmtDate(request.date)}</td>
                         <td className="px-5 py-3.5">
-                          <StatusBadge status={request.status} />
+                          <StatusBadge status={badgeStatus(request)} />
                         </td>
                         <td className="px-5 py-3.5 text-right">
                           <Btn
@@ -657,7 +678,7 @@ export function MerchantCreditV1() {
                             </span>
                           </span>
                         </span>
-                        <StatusBadge status={request.status} />
+                        <StatusBadge status={badgeStatus(request)} />
                       </span>
                       <span className="flex flex-wrap justify-between gap-2 text-sm">
                         <span className="font-medium tabular-nums">{lkr(request.form.amount)}</span>
@@ -731,6 +752,22 @@ export function MerchantCreditV1() {
                 needs.
               </p>
             </div>
+          ) : detail &&
+            needsChanges(detail) &&
+            canManage &&
+            eligibility.eligible &&
+            !activeFor(detail.bankId) ? (
+            <Btn
+              block
+              className="sm:w-full"
+              onClick={() => {
+                setOpenId(null);
+                resubmit(detail);
+              }}
+            >
+              Make changes and resubmit
+              <ArrowRight aria-hidden="true" />
+            </Btn>
           ) : detail?.status === "Pending" && canManage ? (
             confirmCancel ? (
               <div className="space-y-3">
@@ -775,7 +812,8 @@ export function MerchantCreditV1() {
               canManage && eligibility.eligible && !activeFor(detail.bankId)
                 ? () => {
                     setOpenId(null);
-                    startApplication(detail.bankId);
+                    if (needsChanges(detail)) resubmit(detail);
+                    else startApplication(detail.bankId);
                   }
                 : undefined
             }
@@ -829,10 +867,10 @@ function timelineFor(request: AnyLoan): TimelineItem[] {
     });
   } else if (request.status === "Rejected") {
     items.push({
-      label: "Declined",
+      label: needsChanges(request) ? "Changes requested" : "Declined",
       date: request.decidedAt ? fmtDateTime(request.decidedAt) : undefined,
-      note: request.reason,
-      state: "failed",
+      note: needsChanges(request) ? "Make the changes and resubmit." : request.reason,
+      state: needsChanges(request) ? "current" : "failed",
     });
   } else {
     items.push({
@@ -848,7 +886,7 @@ function LoanDetail({ request, onRestart }: { request: AnyLoan; onRestart?: () =
   const form = request.form;
   return (
     <div className="space-y-6">
-      <StatusBadge status={request.status} />
+      <StatusBadge status={badgeStatus(request)} />
       {request.status === "Accepted" && (
         <InlineAlert tone="success" title={`${bankName(request.bankId)} accepted your request`}>
           {request.offer ? (
@@ -867,7 +905,13 @@ function LoanDetail({ request, onRestart }: { request: AnyLoan; onRestart?: () =
           </p>
         </InlineAlert>
       )}
-      {request.status === "Rejected" && (
+      {needsChanges(request) && (
+        <InlineAlert tone="warning" title={`${bankName(request.bankId)} asked for changes`}>
+          <p>{request.reason}</p>
+          <ChangeList changes={request.changes ?? []} />
+        </InlineAlert>
+      )}
+      {request.status === "Rejected" && !needsChanges(request) && (
         <InlineAlert
           tone="error"
           title="The bank declined this request"
@@ -921,6 +965,22 @@ function LoanDetail({ request, onRestart }: { request: AnyLoan; onRestart?: () =
         </p>
       )}
     </div>
+  );
+}
+
+function ChangeList({ changes }: { changes: NonNullable<LoanRequest["changes"]> }) {
+  return (
+    <ol className="mt-3 space-y-2">
+      {changes.map((change, index) => (
+        <li key={change.title} className="flex gap-2">
+          <span className="font-semibold">{index + 1}.</span>
+          <span>
+            <span className="block font-semibold">{change.title}</span>
+            <span className="block">{change.note}</span>
+          </span>
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -1016,6 +1076,10 @@ function Application({
   }, [step]);
 
   const amount = Number(form.amount || 0);
+  const resubmitted = data.loans.find((request) => request.id === form.resubmitOf);
+  const stepChanges = (resubmitted?.changes ?? []).filter(
+    (change) => step === 3 || change.step === step,
+  );
   const errorsFor = (index: number) => {
     const next: Record<string, string> = {};
     if (index === 0) {
@@ -1166,6 +1230,20 @@ function Application({
           </>
         }
       >
+        {stepChanges.length > 0 && (
+          <div className="mb-7">
+            <InlineAlert
+              tone="warning"
+              title={
+                step === 3
+                  ? `Check the changes ${bank} asked for`
+                  : `${bank} asked you to change this`
+              }
+            >
+              <ChangeList changes={stepChanges} />
+            </InlineAlert>
+          </div>
+        )}
         <div className="mb-7 empty:hidden">
           <ErrorSummary errors={attempts[step] ? errors : {}} focusKey={attempts[step] ?? 0} />
         </div>

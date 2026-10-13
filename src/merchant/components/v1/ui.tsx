@@ -370,6 +370,7 @@ const STATUS: Record<string, { className: string; icon: typeof Clock3; label?: s
   Draft: { className: "bg-slate-100 text-slate-800 ring-slate-200", icon: PencilLine },
   Expired: { className: "bg-slate-100 text-slate-800 ring-slate-200", icon: Clock3 },
   "Coming soon": { className: "bg-sky-50 text-sky-900 ring-sky-200", icon: Sparkles },
+  "Changes requested": { className: "bg-amber-50 text-amber-900 ring-amber-200", icon: PencilLine },
 };
 export const statusLabel = (status: string) => STATUS[status]?.label ?? status;
 export function StatusBadge({ status, label }: { status: string; label?: string }) {
