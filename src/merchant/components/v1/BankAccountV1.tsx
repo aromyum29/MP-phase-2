@@ -80,11 +80,10 @@ const valueClass = "mt-1 text-base font-semibold text-gray-900";
 
 function CardAction({
   tone = "secondary",
-  chevron = false,
   className,
   children,
   ...props
-}: ComponentProps<"button"> & { tone?: "primary" | "secondary" | "danger"; chevron?: boolean }) {
+}: ComponentProps<"button"> & { tone?: "primary" | "secondary" | "danger" }) {
   return (
     <button
       type="button"
@@ -92,7 +91,7 @@ function CardAction({
         "flex min-h-[44px] w-full items-center gap-3 rounded-lg px-4 text-left text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 sm:h-12 sm:min-h-0",
         tone === "primary"
           ? "justify-center bg-gray-900 font-semibold tracking-wide text-white shadow-md hover:bg-gray-800 hover:shadow-lg"
-          : "justify-between border bg-white font-medium hover:bg-gray-50",
+          : "justify-center border bg-white font-medium hover:bg-gray-50",
         tone === "secondary" && "border-gray-300 text-gray-800 hover:border-gray-400",
         tone === "danger" && "border-[#e3b4b9] text-[#b4232f] hover:bg-red-50",
         className,
@@ -100,7 +99,6 @@ function CardAction({
       {...props}
     >
       <span className="min-w-0">{children}</span>
-      {chevron && <ChevronRight className="h-4 w-4 shrink-0 text-gray-500" aria-hidden="true" />}
     </button>
   );
 }
@@ -411,9 +409,7 @@ export function BankAccountV1() {
               <div className="col-span-2 space-y-2.5 lg:col-span-1">
                 {pending ? (
                   <>
-                    <CardAction chevron onClick={() => setOpenId(pending.id)}>
-                      View request
-                    </CardAction>
+                    <CardAction onClick={() => setOpenId(pending.id)}>View request</CardAction>
                     {canManage && (
                       <CardAction
                         tone="danger"
@@ -434,7 +430,6 @@ export function BankAccountV1() {
                   )
                 )}
                 <CardAction
-                  className="justify-center"
                   onClick={() =>
                     setSearch({
                       ...Object.fromEntries(VIEW_KEYS.map((key) => [key, null])),
