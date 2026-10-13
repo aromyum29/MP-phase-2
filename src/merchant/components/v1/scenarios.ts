@@ -12,8 +12,7 @@ import { VIEW_KEYS, useSetSearch } from "./url";
 // Main UI demo scenarios, listed under Scenarios in the Version switcher.
 // Each one loads sample data and opens the view where it can be seen.
 export type Scenario = { id: string; label: string; description: string };
-// Merchant credit first-visit explainer: remembered on this device once dismissed.
-export const INTRO_KEY = "koko-credit-intro-seen-v1";
+// Merchant credit intro: shows on each page load; this event brings it back.
 export const INTRO_RESET_EVENT = "koko-credit-intro-reset";
 
 export const SCENARIOS: Scenario[] = [
@@ -102,11 +101,6 @@ export function useRunScenario() {
   const clear = Object.fromEntries(VIEW_KEYS.map((key) => [key, null]));
   return (id: string) => {
     if (id === "credit-first-visit") {
-      try {
-        localStorage.removeItem(INTRO_KEY);
-      } catch {
-        /* The introduction shows anyway when storage is unavailable. */
-      }
       window.dispatchEvent(new Event(INTRO_RESET_EVENT));
       update({ eligibility: "eligible", role: "Super Admin" });
       setSearch({ ...clear, page: "merchant-loans" });

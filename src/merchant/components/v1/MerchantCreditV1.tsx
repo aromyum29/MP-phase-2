@@ -67,17 +67,33 @@ import {
   statusLabel,
   type TimelineItem,
 } from "./ui";
-import { INTRO_KEY, INTRO_RESET_EVENT, firstChangeStep, resubmitDraft } from "./scenarios";
+import { INTRO_RESET_EVENT, firstChangeStep, resubmitDraft } from "./scenarios";
 import { VIEW_KEYS, useOptionalParam, useSetSearch, useViewParam } from "./url";
 
 type AnyLoan = LoanRequest | CancelledLoanRequest;
-const HOW_STEPS: Array<[string, string]> = [
-  ["Apply in about 5 minutes", "Most details are filled in from your Koko profile and sales."],
-  ["Sampath Bank decides", "Usually in about 5 business days. You see the offer first."],
-  [
-    "Get funded, repay the bank",
-    "The bank pays into your business account. You repay Sampath Bank monthly.",
-  ],
+// How it works, shown in the intro and the side panel. Illustrations are in
+// public/merchant-credit.
+const HOW_STEPS: Array<{ title: string; body: string; image: string }> = [
+  {
+    title: "Apply in 5 minutes",
+    body: "Most details come from Koko.",
+    image: "/merchant-credit/apply.webp",
+  },
+  {
+    title: "Sampath Bank decides",
+    body: "In about 5 business days.",
+    image: "/merchant-credit/bank-decides.webp",
+  },
+  {
+    title: "Get funded",
+    body: "Paid into your business account.",
+    image: "/merchant-credit/get-funded.webp",
+  },
+  {
+    title: "Repay the bank",
+    body: "Monthly, directly to Sampath.",
+    image: "/merchant-credit/repay.webp",
+  },
 ];
 const FAQ: Array<[string, string]> = [
   [
@@ -174,6 +190,7 @@ function useEligibility() {
 // with the data (see FinanceDataProvider). Only views restored from the URL the
 // page loaded with are closed, not ones opened later (e.g. by a scenario).
 let freshLoad = true;
+let introDismissed = false;
 const loadedWithView =
   typeof window !== "undefined" &&
   ["apply", "request"].some((key) => new URLSearchParams(window.location.search).has(key));
@@ -195,28 +212,20 @@ export function MerchantCreditV1() {
   const [discarding, setDiscarding] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState<string | null>(null);
-  // First-visit explainer. Dismissing it is remembered on this device.
-  const [introSeen, setIntroSeen] = useState<boolean | null>(null);
+  // Intro shown on every page load; Got it hides it until the next reload.
+  const [introSeen, setIntroSeen] = useState(introDismissed);
   useEffect(() => {
-    const read = () => {
-      try {
-        setIntroSeen(localStorage.getItem(INTRO_KEY) === "1");
-      } catch {
-        setIntroSeen(false);
-      }
+    // The "first visit" scenario brings it back while the page is open.
+    const show = () => {
+      introDismissed = false;
+      setIntroSeen(false);
     };
-    read();
-    // The "first visit" scenario clears the flag while the page may be open.
-    window.addEventListener(INTRO_RESET_EVENT, read);
-    return () => window.removeEventListener(INTRO_RESET_EVENT, read);
+    window.addEventListener(INTRO_RESET_EVENT, show);
+    return () => window.removeEventListener(INTRO_RESET_EVENT, show);
   }, []);
   const dismissIntro = () => {
+    introDismissed = true;
     setIntroSeen(true);
-    try {
-      localStorage.setItem(INTRO_KEY, "1");
-    } catch {
-      /* Shown again next visit. */
-    }
   };
   const [howOpen, setHowOpen] = useState(false);
   const cancelAction = useAction();
@@ -416,32 +425,33 @@ export function MerchantCreditV1() {
 
       {tab === "banks" ? (
         <div className="max-w-[880px] space-y-8">
-          {introSeen === false && (
+          {!introSeen && (
             <section
               aria-labelledby="mc-intro"
               className="rounded-2xl border border-[#BDDCEE] bg-[#f1f7fb] p-5 sm:p-6"
             >
-              <h2 id="mc-intro" className="text-base text-gray-900">
-                New to merchant credit?
-              </h2>
-              <p className="mt-1 max-w-2xl text-sm text-gray-700">
-                Get funding for your business from Sampath Bank, applied for through Koko. Koko
-                shares your sales history so you can apply in minutes, and you repay the bank
-                directly.
-              </p>
-              <ol className="mt-5 grid gap-4 sm:grid-cols-3">
-                {HOW_STEPS.map(([title, body], index) => (
-                  <li key={title} className="flex gap-3">
-                    <span
-                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-900 text-xs font-semibold text-white"
-                      aria-hidden="true"
-                    >
-                      {index + 1}
-                    </span>
-                    <span className="text-sm">
-                      <span className="block font-medium text-gray-900">{title}</span>
-                      <span className="block text-muted-foreground">{body}</span>
-                    </span>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <h2 id="mc-intro" className="text-base text-gray-900">
+                  How merchant credit works
+                </h2>
+                <p className="text-sm text-gray-700">Sampath Bank lends. Koko helps you apply.</p>
+              </div>
+              <ol className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                {HOW_STEPS.map((item, index) => (
+                  <li key={item.title} className="rounded-xl bg-white p-3 text-center">
+                    <img
+                      src={item.image}
+                      alt=""
+                      width={240}
+                      height={240}
+                      loading="lazy"
+                      className="mx-auto aspect-square w-full max-w-[160px] object-contain"
+                    />
+                    <p className="mt-2 text-sm font-semibold text-gray-900">
+                      <span className="sr-only">Step {index + 1}: </span>
+                      {item.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{item.body}</p>
                   </li>
                 ))}
               </ol>
@@ -924,7 +934,7 @@ export function MerchantCreditV1() {
       >
         <div className="space-y-7">
           <ol className="space-y-4">
-            {HOW_STEPS.map(([title, body], index) => (
+            {HOW_STEPS.map(({ title, body }, index) => (
               <li key={title} className="flex gap-3">
                 <span
                   className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-900 text-xs font-semibold text-white"
