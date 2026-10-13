@@ -15,6 +15,14 @@ export type LoanForm = {
   repayments: string;
   // Iteration 1 only: free-text purpose when "Other" is chosen.
   purposeOther: string;
+  // Main UI (iteration 1) business loan details; the rest comes from KYC.
+  employees?: string;
+  designation?: string;
+  lender?: string;
+  outstanding?: string;
+  security?: string;
+  statements?: string;
+  accounts?: string;
 };
 export type LoanStatus = "Pending" | "Accepted" | "Rejected";
 // Optional fields below are written by iteration 1 only; iteration 2 ignores them.

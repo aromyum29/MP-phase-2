@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ArrowRight,
-  Bell,
-  BellRing,
   CheckCircle2,
+  ChevronDown,
   ExternalLink,
   FileText,
   Lock,
-  TrendingUp,
+  ShieldCheck,
 } from "lucide-react";
 import { BankLogo } from "../BankLogo";
 import { cn } from "../ui/utils";
@@ -30,6 +29,7 @@ import {
   LEGAL,
   LENDER_LINKS,
   LENDER_TERMS,
+  SECURITY_OPTIONS,
 } from "./placeholders";
 import {
   BackLink,
@@ -41,6 +41,7 @@ import {
   DefinitionList,
   Drawer,
   ErrorSummary,
+  FileDrop,
   FilterChips,
   InlineAlert,
   PageHeader,
@@ -67,7 +68,20 @@ import {
 import { useOptionalParam, useSetSearch, useViewParam } from "./url";
 
 type AnyLoan = LoanRequest | CancelledLoanRequest;
-const STEPS = ["Credit needs", "Business and contact", "Business finances", "Review and submit"];
+const STEPS = ["Credit needs", "Business details", "Finances and documents", "Review and submit"];
+// Business details already verified at onboarding (KYC), shown read-only.
+const KYC_ITEMS: Array<[string, string]> = [
+  ["Registered name", BUSINESS.name],
+  ["Registration number", BUSINESS.registration],
+  ["Business type", BUSINESS.structure],
+  ["Industry", BUSINESS.industry],
+  ["Operating since", BUSINESS.operatingSince],
+  ["TIN", BUSINESS.tin],
+  ["Registered address", BUSINESS.address],
+  ["Director", `${BUSINESS.director.name} · NIC ${BUSINESS.director.nic}`],
+];
+// Uploaded files stay in memory while the page is open, so a saved draft keeps them.
+const uploads = new Map<string, Partial<Record<"statements" | "accounts", File>>>();
 const PURPOSES = ["Buy stock", "Business expansion", "Equipment", "Working capital", "Other"];
 const PURPOSE_LABELS: Record<string, string> = {
   "Buy stock": "Buy stock",
@@ -81,6 +95,12 @@ const purposeText = (form: LoanForm) =>
   form.purpose === "Other" && form.purposeOther
     ? form.purposeOther
     : (PURPOSE_LABELS[form.purpose] ?? form.purpose);
+const securityText = (form: LoanForm) =>
+  SECURITY_OPTIONS.find((option) => option.value === form.security)?.label ?? "Not given";
+const borrowingText = (form: LoanForm) =>
+  form.borrowing === "Yes"
+    ? `${form.lender || "Yes"} · ${lkr(form.repayments)} a month · ${lkr(form.outstanding || 0)} owed`
+    : form.borrowing || "Not given";
 const bankName = (id: string) =>
   lenders.find((lender) => lender.id === id)?.name ??
   COMING_SOON_BANKS.find((bank) => bank.id === id)?.name ??
@@ -127,6 +147,7 @@ export function MerchantCreditV1() {
   const [receipt, setReceipt] = useState<string | null>(null);
   const [discarding, setDiscarding] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState<string | null>(null);
   const cancelAction = useAction();
   useEffect(() => {
     if (!freshLoad) return;
@@ -170,21 +191,6 @@ export function MerchantCreditV1() {
     setStep(0);
     setApplying(bankId);
   };
-  const toggleNotify = (bankId: string) => {
-    const on = !(data.notifyBanks ?? []).includes(bankId);
-    setData((previous) => {
-      const current = previous.notifyBanks ?? [];
-      return {
-        ...previous,
-        notifyBanks: on ? [...current, bankId] : current.filter((id) => id !== bankId),
-      };
-    });
-    notify(
-      on
-        ? `We'll let you know when ${bankName(bankId)} joins`
-        : `Notifications off for ${bankName(bankId)}`,
-    );
-  };
   const cancelRequest = async (id: string) => {
     const ok = await cancelAction.run(() =>
       setData((previous) => {
@@ -211,7 +217,7 @@ export function MerchantCreditV1() {
       <V1Page>
         <PageHeader
           title="Merchant credit"
-          description="Business funding from partner banks, based on your Koko sales."
+          description="Funding for your business from Koko and our partner bank."
         />
         <div className="space-y-4" aria-busy="true" aria-label="Loading merchant credit">
           <SkeletonBlock className="h-11 w-64" />
@@ -299,7 +305,7 @@ export function MerchantCreditV1() {
     <V1Page>
       <PageHeader
         title="Merchant credit"
-        description="Business funding from partner banks, based on your Koko sales."
+        description="Funding for your business from Koko and our partner bank."
       />
       <UnderlineTabs
         label="Merchant credit"
@@ -312,164 +318,198 @@ export function MerchantCreditV1() {
       />
 
       {tab === "banks" ? (
-        <div className="max-w-[880px] space-y-6">
-          <EligibilityCard eligibility={eligibility} />
-
-          <section aria-labelledby="mc-how" className="space-y-3">
-            <h2 id="mc-how" className="text-lg font-semibold">
-              How it works
-            </h2>
-            <ol className="grid gap-3 sm:grid-cols-3">
-              {[
-                ["Check what you could get", "Your estimate is based on your Koko sales."],
-                ["Apply in about 5 minutes", "Most details are filled in from your Koko profile."],
-                [
-                  "The bank decides",
-                  `Usually in ${eligibility.terms.decision}. You continue with the bank if accepted.`,
-                ],
-              ].map(([title, body], index) => (
-                <li key={title} className="flex gap-3 rounded-xl bg-[#f6f6f8] p-4">
-                  <span
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 text-xs font-semibold text-white"
-                    aria-hidden="true"
-                  >
-                    {index + 1}
-                  </span>
-                  <span>
-                    <span className="block text-sm font-semibold">{title}</span>
-                    <span className="block text-sm text-muted-foreground">{body}</span>
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </section>
-
-          <section aria-labelledby="mc-available" className="space-y-3">
-            <h2 id="mc-available" className="text-lg font-semibold">
-              Available banks
-            </h2>
-            {lenders.map((lender) => {
-              const terms = LENDER_TERMS[lender.id];
-              const active = activeFor(lender.id);
-              const draft = data.loanDrafts[lender.id];
-              return (
-                <Card key={lender.id} aria-label={lender.name} className="space-y-5">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <BankLogo bank={lender.name} />
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-lg font-semibold">{lender.name}</h3>
-                      <p className="text-sm text-muted-foreground">Business funding through Koko</p>
+        <div className="max-w-[880px] space-y-8">
+          {lenders.map((lender) => {
+            const terms = LENDER_TERMS[lender.id];
+            const active = activeFor(lender.id);
+            const draft = data.loanDrafts[lender.id];
+            const open = detailsOpen === lender.id;
+            const unmet = [
+              !eligibility.monthsOk && `${terms.minMonths} months selling with Koko`,
+              !eligibility.salesOk && `${lkr(terms.minMonthlySales)} average monthly Koko sales`,
+            ].filter(Boolean);
+            return (
+              <Card key={lender.id} aria-label={lender.name} className="p-5 sm:p-8">
+                <div className="flex flex-wrap items-center gap-3">
+                  <BankLogo bank={lender.name} />
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-xl text-gray-900">{lender.name}</h2>
+                    <p className="text-sm text-muted-foreground">Business funding through Koko</p>
+                  </div>
+                  {active && <StatusBadge status={active.status} />}
+                </div>
+                <dl className="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-3">
+                  {[
+                    ["Amount", `Up to ${lkr(terms.max)}`],
+                    [
+                      "Repay over",
+                      `${terms.terms[0]}–${terms.terms[terms.terms.length - 1]} months`,
+                    ],
+                    ["Decision", `In ${terms.decision}`],
+                  ].map(([label, value]) => (
+                    <div key={label}>
+                      <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        {label}
+                      </dt>
+                      <dd className="mt-1 text-base font-semibold text-gray-900">{value}</dd>
                     </div>
-                    {active && <StatusBadge status={active.status} />}
-                  </div>
-                  <DefinitionList
-                    items={[
-                      ["Amount", `${lkr(terms.min)} – ${lkr(terms.max)}`],
-                      [
-                        "Repayment period",
-                        `${terms.terms[0]}–${terms.terms[terms.terms.length - 1]} months`,
-                      ],
-                      ["Decision", `Usually ${terms.decision}`],
-                      ["Interest and fees", terms.rates],
-                    ]}
-                  />
-                  <div>
-                    <p className="text-sm font-medium">What you'll need</p>
-                    <ul className="mt-1 grid gap-x-6 gap-y-1 text-sm text-muted-foreground sm:grid-cols-2">
-                      {terms.documents.map((doc) => (
-                        <li key={doc} className="flex gap-2">
-                          <FileText className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                          {doc}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-5">
-                    {active ? (
-                      <>
-                        <Btn size="lg" variant="secondary" onClick={() => setOpenId(active.id)}>
-                          View request
-                        </Btn>
-                        <p className="text-sm text-muted-foreground">
-                          You can have one open request with each bank.
-                        </p>
-                      </>
-                    ) : !canManage ? (
-                      <p className="flex items-start gap-2 text-sm text-muted-foreground">
-                        <Lock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                        Only Super Admins and Finance Admins can apply for merchant credit.
-                      </p>
-                    ) : !eligibility.eligible ? (
-                      <p className="text-sm text-muted-foreground">
-                        You can apply once your business meets the requirements above.
-                      </p>
-                    ) : draft ? (
-                      discarding === lender.id ? (
-                        <DiscardConfirm
-                          onDiscard={() => discardDraft(lender.id)}
-                          onKeep={() => setDiscarding(null)}
-                        />
-                      ) : (
-                        <>
-                          <Btn
-                            size="lg"
-                            className="shadow-md"
-                            onClick={() => startApplication(lender.id)}
-                          >
-                            Continue application
-                            <ArrowRight aria-hidden="true" />
-                          </Btn>
-                          <Btn variant="tertiary" onClick={() => setDiscarding(lender.id)}>
-                            Discard draft
-                          </Btn>
-                        </>
-                      )
+                  ))}
+                </dl>
+
+                <div className="mt-7 flex flex-wrap items-center gap-x-4 gap-y-3">
+                  {active ? (
+                    <Btn size="lg" variant="secondary" onClick={() => setOpenId(active.id)}>
+                      View request
+                    </Btn>
+                  ) : !canManage ? (
+                    <p className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <Lock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                      Only Super Admins and Finance Admins can apply for merchant credit.
+                    </p>
+                  ) : !eligibility.eligible ? (
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-medium text-gray-900">Not eligible yet.</span> You need{" "}
+                      {unmet.join(" and ")}.
+                    </p>
+                  ) : draft ? (
+                    discarding === lender.id ? (
+                      <DiscardConfirm
+                        onDiscard={() => discardDraft(lender.id)}
+                        onKeep={() => setDiscarding(null)}
+                      />
                     ) : (
-                      <Btn
-                        size="lg"
-                        className="shadow-md"
-                        onClick={() => startApplication(lender.id)}
+                      <>
+                        <Btn
+                          size="lg"
+                          className="shadow-md"
+                          onClick={() => startApplication(lender.id)}
+                        >
+                          Continue application
+                          <ArrowRight aria-hidden="true" />
+                        </Btn>
+                        <Btn variant="tertiary" onClick={() => setDiscarding(lender.id)}>
+                          Discard draft
+                        </Btn>
+                      </>
+                    )
+                  ) : (
+                    <Btn
+                      size="lg"
+                      className="shadow-md"
+                      onClick={() => startApplication(lender.id)}
+                    >
+                      Request merchant credit
+                      <ArrowRight aria-hidden="true" />
+                    </Btn>
+                  )}
+                  <Btn
+                    variant="tertiary"
+                    aria-expanded={open}
+                    aria-controls={`mc-details-${lender.id}`}
+                    onClick={() => setDetailsOpen(open ? null : lender.id)}
+                  >
+                    {open ? "Hide details" : "Details and requirements"}
+                    <ChevronDown
+                      aria-hidden="true"
+                      className={cn("transition-transform", open && "rotate-180")}
+                    />
+                  </Btn>
+                </div>
+
+                {open && (
+                  <div
+                    id={`mc-details-${lender.id}`}
+                    className="mt-6 grid gap-6 border-t border-gray-100 pt-6 sm:grid-cols-2"
+                  >
+                    <section aria-labelledby={`mc-how-${lender.id}`}>
+                      <h3
+                        id={`mc-how-${lender.id}`}
+                        className="text-sm font-semibold text-gray-900"
                       >
-                        Request merchant credit
-                        <ArrowRight aria-hidden="true" />
-                      </Btn>
-                    )}
+                        How it works
+                      </h3>
+                      <ol className="mt-3 space-y-3">
+                        {[
+                          ["Apply in about 5 minutes", "Most details come from your Koko profile."],
+                          ["Sampath Bank decides", `Usually in ${terms.decision}.`],
+                          ["Get funded", "If accepted, you sign the agreement with the bank."],
+                        ].map(([title, body], index) => (
+                          <li key={title} className="flex gap-3">
+                            <span
+                              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-900 text-xs font-semibold text-white"
+                              aria-hidden="true"
+                            >
+                              {index + 1}
+                            </span>
+                            <span className="text-sm">
+                              <span className="block font-medium text-gray-900">{title}</span>
+                              <span className="block text-muted-foreground">{body}</span>
+                            </span>
+                          </li>
+                        ))}
+                      </ol>
+                    </section>
+                    <div className="space-y-5">
+                      <section aria-labelledby={`mc-need-${lender.id}`}>
+                        <h3
+                          id={`mc-need-${lender.id}`}
+                          className="text-sm font-semibold text-gray-900"
+                        >
+                          Who can apply
+                        </h3>
+                        <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+                          <li>At least {terms.minMonths} months selling with Koko</li>
+                          <li>
+                            {lkr(terms.minMonthlySales)} or more in average monthly Koko sales
+                          </li>
+                        </ul>
+                      </section>
+                      <section aria-labelledby={`mc-docs-${lender.id}`}>
+                        <h3
+                          id={`mc-docs-${lender.id}`}
+                          className="text-sm font-semibold text-gray-900"
+                        >
+                          What you'll need
+                        </h3>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          Bank statements for the last 6 months. Your registration certificate and
+                          director NIC are already on file from your Koko verification.
+                        </p>
+                      </section>
+                      <section aria-labelledby={`mc-rates-${lender.id}`}>
+                        <h3
+                          id={`mc-rates-${lender.id}`}
+                          className="text-sm font-semibold text-gray-900"
+                        >
+                          Interest and fees
+                        </h3>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          {terms.rates}. You see the offer before you agree to anything.
+                        </p>
+                      </section>
+                    </div>
                   </div>
-                </Card>
-              );
-            })}
-          </section>
+                )}
+              </Card>
+            );
+          })}
 
           <section aria-labelledby="mc-soon" className="space-y-3">
-            <div>
-              <h2 id="mc-soon" className="text-lg font-semibold">
-                More banks coming soon
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Get a notification when a bank starts accepting requests through Koko.
-              </p>
-            </div>
-            <ul className={cn(SURFACE_LIGHT, "divide-y divide-border overflow-hidden")}>
-              {COMING_SOON_BANKS.map((bank) => {
-                const on = (data.notifyBanks ?? []).includes(bank.id);
-                return (
-                  <li key={bank.id} className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+            <h2 id="mc-soon" className="text-sm font-semibold text-gray-900">
+              More banks coming soon
+            </h2>
+            <ul className="flex flex-wrap gap-2">
+              {COMING_SOON_BANKS.map((bank) => (
+                <li
+                  key={bank.id}
+                  className="flex items-center gap-2 rounded-full border border-gray-200 bg-white py-1 pl-1 pr-3 text-sm text-gray-700"
+                >
+                  <span className="origin-left scale-75" aria-hidden="true">
                     <BankLogo bank={bank.name} />
-                    <span className="min-w-0 flex-1 text-sm font-medium">{bank.name}</span>
-                    <StatusBadge status="Coming soon" />
-                    <Btn
-                      variant={on ? "tertiary" : "secondary"}
-                      size="sm"
-                      aria-pressed={on}
-                      aria-label={`${on ? "Notifications on" : "Notify me"}, ${bank.name}`}
-                      onClick={() => toggleNotify(bank.id)}
-                    >
-                      {on ? <BellRing aria-hidden="true" /> : <Bell aria-hidden="true" />}
-                      {on ? "Notifications on" : "Notify me"}
-                    </Btn>
-                  </li>
-                );
-              })}
+                  </span>
+                  <span className="-ml-2">{bank.name}</span>
+                </li>
+              ))}
             </ul>
           </section>
         </div>
@@ -760,75 +800,6 @@ function DiscardConfirm({ onDiscard, onKeep }: { onDiscard: () => void; onKeep: 
   );
 }
 
-function EligibilityCard({ eligibility }: { eligibility: ReturnType<typeof useEligibility> }) {
-  const { terms } = eligibility;
-  if (eligibility.eligible) {
-    return (
-      <Card className="border-emerald-300 bg-emerald-50/50">
-        <div className="flex flex-wrap items-start gap-4">
-          <span
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800"
-            aria-hidden="true"
-          >
-            <TrendingUp className="h-5 w-5" />
-          </span>
-          <div className="min-w-0 flex-1 basis-64">
-            <p className="text-sm font-medium text-emerald-900">You're eligible</p>
-            <h2 className="mt-1 text-2xl font-bold tracking-tight">
-              You could request up to {lkr(eligibility.estimate)}
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Based on {lkr(eligibility.average)} average monthly Koko sales over the last 6 months
-              and {eligibility.months} months on Koko. This is an estimate. The bank makes the final
-              decision.
-            </p>
-          </div>
-        </div>
-      </Card>
-    );
-  }
-  const factors: Array<{ label: string; value: string; ok: boolean }> = [
-    {
-      label: "Time selling with Koko",
-      value: `${eligibility.months} of ${terms.minMonths} months needed`,
-      ok: eligibility.monthsOk,
-    },
-    {
-      label: "Average monthly Koko sales",
-      value: `${lkr(eligibility.average)} of ${lkr(terms.minMonthlySales)} needed`,
-      ok: eligibility.salesOk,
-    },
-  ];
-  return (
-    <Card>
-      <h2 className="text-xl font-semibold">Not eligible yet</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Partner banks look at your Koko sales history. Here's where your business stands.
-      </p>
-      <ul className="mt-4 divide-y divide-border rounded-xl border border-border">
-        {factors.map((factor) => (
-          <li
-            key={factor.label}
-            className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
-          >
-            <span>
-              <span className="block text-sm font-medium">{factor.label}</span>
-              <span className="block text-sm text-muted-foreground">{factor.value}</span>
-            </span>
-            <StatusBadge
-              status={factor.ok ? "Verified" : "Pending"}
-              label={factor.ok ? "Met" : "Needs work"}
-            />
-          </li>
-        ))}
-      </ul>
-      <p className="mt-4 text-sm text-muted-foreground">
-        Keep taking payments with Koko. We'll let you know as soon as you qualify.
-      </p>
-    </Card>
-  );
-}
-
 function timelineFor(request: AnyLoan): TimelineItem[] {
   const items: TimelineItem[] = [
     { label: "Submitted", date: fmtDateTime(request.date), state: "done" },
@@ -918,28 +889,28 @@ function LoanDetail({ request, onRestart }: { request: AnyLoan; onRestart?: () =
             ["Requested amount", lkr(form.amount)],
             ["What it's for", purposeText(form)],
             ["Repayment period", form.term ? `${form.term} months` : "Not given"],
+            ["Security", securityText(form)],
           ]}
         />
       </DetailGroup>
-      <DetailGroup title="Business and contact">
+      <DetailGroup title="Business details">
         <DefinitionList
           items={[
-            ["Business", form.business],
-            ["Registration number", form.registration],
-            ["Contact person", form.contact],
+            ["Business", `${form.business} · ${form.registration}`],
+            ["Employees", form.employees || "Not given"],
+            ["Contact person", [form.contact, form.designation].filter(Boolean).join(" · ")],
             ["Mobile", form.phone],
             ["Email", form.email],
           ]}
         />
       </DetailGroup>
-      <DetailGroup title="Business finances">
+      <DetailGroup title="Finances and documents">
         <DefinitionList
           items={[
             ["Average monthly revenue", lkr(form.revenue)],
-            ["Existing business borrowing", form.borrowing || "Not given"],
-            ...(form.borrowing === "Yes"
-              ? ([["Monthly repayments", lkr(form.repayments)]] as Array<[string, string]>)
-              : []),
+            ["Existing loans or credit", borrowingText(form)],
+            ["Bank statements", form.statements || "Not attached"],
+            ["Financial statements", form.accounts || "Not added"],
           ]}
         />
       </DetailGroup>
@@ -992,6 +963,7 @@ function Application({
       email: CURRENT_USER.email,
       revenue: String(eligibility.average),
       purposeOther: "",
+      designation: "Director",
     }),
     [eligibility.average],
   );
@@ -1012,7 +984,9 @@ function Application({
           ...defaults,
           ...previous.loanDrafts[bankId],
           [key]: value,
-          ...(key === "borrowing" && value === "No" ? { repayments: "" } : {}),
+          ...(key === "borrowing" && value === "No"
+            ? { repayments: "", lender: "", outstanding: "" }
+            : {}),
         },
       },
     }));
@@ -1021,6 +995,18 @@ function Application({
   const [crib, setCrib] = useState(false);
   const [authorised, setAuthorised] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
+  const [files, setFiles] = useState(() => uploads.get(bankId) ?? {});
+  const [fileErrors, setFileErrors] = useState<Partial<Record<"statements" | "accounts", string>>>(
+    {},
+  );
+  const setFile = (key: "statements" | "accounts", file: File | null) => {
+    const nextFiles = { ...files, [key]: file ?? undefined };
+    uploads.set(bankId, nextFiles);
+    setFiles(nextFiles);
+    setFileErrors((previous) => ({ ...previous, [key]: undefined }));
+    update(key, file?.name ?? "");
+    if (key === "statements") touch("mc-statements");
+  };
   const submitAction = useAction();
   const heading = useRef<HTMLHeadingElement>(null);
   const mounted = useRef(false);
@@ -1040,10 +1026,15 @@ function Application({
       else if (form.purpose === "Other" && !form.purposeOther?.trim())
         next["mc-purpose-other"] = "Tell the bank what the credit is for.";
       if (!form.term) next["mc-term"] = "Choose a repayment period.";
+      if (!form.security)
+        next["mc-security"] = "Choose the security you can offer, or No security.";
     }
     if (index === 1) {
+      if (!Number(form.employees))
+        next["mc-employees"] = "Enter how many people work in the business.";
       if (!form.contact.trim())
         next["mc-contact"] = "Enter the name of the person the bank should contact.";
+      if (!form.designation?.trim()) next["mc-designation"] = "Enter their role in the business.";
       if (!/^(?:0\d{9}|\+94\d{9})$/.test(form.phone.replace(/[\s-]/g, "")))
         next["mc-phone"] = "Enter a Sri Lankan mobile number, like 077 123 4567.";
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()))
@@ -1054,8 +1045,14 @@ function Application({
         next["mc-revenue"] = "Enter your average monthly revenue. Enter 0 if you have none.";
       if (!form.borrowing)
         next["mc-borrowing"] = "Choose whether the business has existing borrowing.";
-      else if (form.borrowing === "Yes" && !Number(form.repayments))
-        next["mc-repayments"] = "Enter the total you repay each month.";
+      else if (form.borrowing === "Yes") {
+        if (!form.lender?.trim()) next["mc-lender"] = "Enter the bank or lender.";
+        if (!Number(form.repayments))
+          next["mc-repayments"] = "Enter the total you repay each month.";
+        if (!Number(form.outstanding)) next["mc-outstanding"] = "Enter the total still owed.";
+      }
+      if (!files.statements)
+        next["mc-statements"] = "Attach your bank statements for the last 6 months.";
     }
     if (index === 3) {
       if (!crib) next["mc-crib"] = "Give permission for the CRIB check to send your request.";
@@ -1125,11 +1122,8 @@ function Application({
 
   const titles = [
     ["What do you need?", "These are preferences. The bank confirms the final amount and terms."],
-    [
-      "Business and contact",
-      "We've filled this in from your Koko profile. Check the contact details.",
-    ],
-    ["Business finances", "A quick picture of your income and existing borrowing."],
+    ["Business details", "Most of this comes from your Koko verification. Add the rest."],
+    ["Finances and documents", "Your income, any existing borrowing and your bank statements."],
     ["Review and submit", `Check your request before it goes to ${bank}.`],
   ][step];
 
@@ -1259,36 +1253,75 @@ function Application({
                 label: `${months} months`,
               }))}
             />
+            <RadioCards
+              name="mc-security"
+              legend="Security you can offer"
+              hint="Optional security can help with larger amounts. The bank confirms what it needs."
+              value={form.security ?? ""}
+              onChange={(value) => {
+                update("security", value);
+                touch("mc-security");
+              }}
+              error={shown("mc-security")}
+              options={SECURITY_OPTIONS}
+            />
           </div>
         )}
 
         {step === 1 && (
           <div className="flex flex-col gap-7">
+            <section
+              aria-labelledby="mc-kyc"
+              className="rounded-xl border border-gray-200 bg-[#f3f3f5]/60 p-4 sm:p-5"
+            >
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <h3 id="mc-kyc" className="text-sm font-semibold text-gray-900">
+                  From your Koko verification
+                </h3>
+                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-700" aria-hidden="true" />
+                  Verified {BUSINESS.verifiedOn}
+                </span>
+              </div>
+              <DefinitionList items={KYC_ITEMS} />
+              <p className="mt-4 text-xs text-muted-foreground">
+                Something out of date? Update it in Profiles before you apply.
+              </p>
+            </section>
+            <TextInput
+              id="mc-employees"
+              label="Number of employees"
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="For example, 12"
+              value={form.employees ?? ""}
+              onChange={(event) =>
+                update("employees", event.target.value.replace(/\D/g, "").slice(0, 5))
+              }
+              onBlur={() => touch("mc-employees")}
+              error={shown("mc-employees")}
+              hint="Include yourself and any part-time staff."
+            />
             <div className="grid gap-7 sm:grid-cols-2 sm:gap-5">
               <TextInput
-                id="mc-business"
-                label="Registered business name"
-                value={BUSINESS.name}
-                locked
-                hint="From your Koko business profile. Update it in Profiles."
+                id="mc-contact"
+                label="Contact person"
+                autoComplete="name"
+                value={form.contact}
+                onChange={(event) => update("contact", event.target.value)}
+                onBlur={() => touch("mc-contact")}
+                error={shown("mc-contact")}
               />
               <TextInput
-                id="mc-registration"
-                label="Business registration number"
-                value={BUSINESS.registration}
-                locked
+                id="mc-designation"
+                label="Their role"
+                autoComplete="organization-title"
+                value={form.designation ?? ""}
+                onChange={(event) => update("designation", event.target.value)}
+                onBlur={() => touch("mc-designation")}
+                error={shown("mc-designation")}
               />
             </div>
-            <TextInput
-              id="mc-contact"
-              label="Contact person"
-              autoComplete="name"
-              value={form.contact}
-              onChange={(event) => update("contact", event.target.value)}
-              onBlur={() => touch("mc-contact")}
-              error={shown("mc-contact")}
-              hint="The bank calls this person about the request."
-            />
             <div className="grid gap-7 sm:grid-cols-2 sm:gap-5">
               <TextInput
                 id="mc-phone"
@@ -1341,16 +1374,79 @@ function Application({
               ]}
             />
             {form.borrowing === "Yes" && (
-              <CurrencyInput
-                id="mc-repayments"
-                label="Total monthly repayments"
-                value={form.repayments}
-                onChange={(value) => update("repayments", value)}
-                onBlur={() => touch("mc-repayments")}
-                error={shown("mc-repayments")}
-                hint="Add up repayments across all business loans and credit."
-              />
+              <>
+                <TextInput
+                  id="mc-lender"
+                  label="Bank or lender"
+                  value={form.lender ?? ""}
+                  onChange={(event) => update("lender", event.target.value)}
+                  onBlur={() => touch("mc-lender")}
+                  error={shown("mc-lender")}
+                  hint="If you have more than one, name the largest."
+                />
+                <div className="grid gap-7 sm:grid-cols-2 sm:gap-5">
+                  <CurrencyInput
+                    id="mc-repayments"
+                    label="Total monthly repayments"
+                    value={form.repayments}
+                    onChange={(value) => update("repayments", value)}
+                    onBlur={() => touch("mc-repayments")}
+                    error={shown("mc-repayments")}
+                  />
+                  <CurrencyInput
+                    id="mc-outstanding"
+                    label="Total still owed"
+                    value={form.outstanding ?? ""}
+                    onChange={(value) => update("outstanding", value)}
+                    onBlur={() => touch("mc-outstanding")}
+                    error={shown("mc-outstanding")}
+                  />
+                </div>
+              </>
             )}
+            <section aria-labelledby="mc-documents" className="space-y-4">
+              <h3 id="mc-documents" className="text-sm font-semibold text-gray-900">
+                Documents
+              </h3>
+              <ul className="space-y-2">
+                {["Business registration certificate", "NIC of each director"].map((doc) => (
+                  <li key={doc} className="flex items-center gap-2 text-sm text-gray-800">
+                    <CheckCircle2
+                      className="h-4 w-4 shrink-0 text-emerald-700"
+                      aria-hidden="true"
+                    />
+                    {doc}
+                    <span className="text-muted-foreground">· On file from your verification</span>
+                  </li>
+                ))}
+              </ul>
+              <FileDrop
+                id="mc-statements"
+                label="Bank statements for the last 6 months"
+                hint="One PDF with all 6 months, from the account your business uses most."
+                file={files.statements ?? null}
+                error={fileErrors.statements ?? shown("mc-statements")}
+                onFile={(file) => setFile("statements", file)}
+                onRemove={() => setFile("statements", null)}
+                onReject={(message) =>
+                  setFileErrors((previous) => ({ ...previous, statements: message }))
+                }
+                maxBytes={10 * 1024 * 1024}
+              />
+              <FileDrop
+                id="mc-accounts"
+                label="Latest financial statements (optional)"
+                hint="Audited accounts or management accounts. They can help the bank decide faster."
+                file={files.accounts ?? null}
+                error={fileErrors.accounts}
+                onFile={(file) => setFile("accounts", file)}
+                onRemove={() => setFile("accounts", null)}
+                onReject={(message) =>
+                  setFileErrors((previous) => ({ ...previous, accounts: message }))
+                }
+                maxBytes={10 * 1024 * 1024}
+              />
+            </section>
           </div>
         )}
 
@@ -1364,28 +1460,28 @@ function Application({
                   ["Amount", lkr(form.amount)],
                   ["What it's for", purposeText(form)],
                   ["Repayment period", `${form.term} months`],
+                  ["Security", securityText(form)],
                 ],
               },
               {
-                title: "Business and contact",
+                title: "Business details",
                 index: 1,
                 items: [
-                  ["Business", BUSINESS.name],
-                  ["Registration number", BUSINESS.registration],
-                  ["Contact person", form.contact],
+                  ["Business", `${BUSINESS.name} · ${BUSINESS.registration}`],
+                  ["Employees", form.employees ?? ""],
+                  ["Contact person", `${form.contact} · ${form.designation ?? ""}`],
                   ["Mobile", form.phone],
                   ["Email", form.email],
                 ],
               },
               {
-                title: "Business finances",
+                title: "Finances and documents",
                 index: 2,
                 items: [
                   ["Average monthly revenue", lkr(form.revenue)],
-                  ["Existing loans or credit", form.borrowing],
-                  ...(form.borrowing === "Yes"
-                    ? [["Monthly repayments", lkr(form.repayments)]]
-                    : []),
+                  ["Existing loans or credit", borrowingText(form)],
+                  ["Bank statements", form.statements ?? ""],
+                  ["Financial statements", form.accounts || "Not added"],
                 ],
               },
             ].map((group) => (

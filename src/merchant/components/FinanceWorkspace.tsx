@@ -1,7 +1,7 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 import { Finance } from "./Finance";
 import { BankAccount } from "./BankAccount";
-import { MerchantLoans } from "./MerchantLoans";
+import { MerchantCreditAlt } from "./v1/MerchantCreditAlt";
 import { usePortalIteration } from "./IterationProvider";
 
 export type FinanceSection = "statement" | "bank-account" | "merchant-loans";
@@ -61,7 +61,7 @@ export function FinanceWorkspace({
         </TabsContent>
         {iteration === "2" && (
           <TabsContent value="merchant-loans" forceMount className="data-[state=inactive]:hidden">
-            <MerchantLoans />
+            <MerchantCreditAlt embedded />
           </TabsContent>
         )}
       </Tabs>

@@ -17,6 +17,15 @@ export const CURRENT_USER = {
 export const BUSINESS = {
   name: "Carnage Retail (Pvt) Ltd",
   registration: "PV 00245781",
+  // Verified at onboarding (KYC). Placeholder values: replace with the
+  // merchant's KYC record.
+  structure: "Private limited company",
+  industry: "Retail · Clothing and accessories",
+  operatingSince: "March 2017",
+  address: "No. 112, Galle Road, Colombo 03",
+  tin: "134 567 890",
+  director: { name: "John Doe", nic: "1985 •••• •312" },
+  verifiedOn: "4 Feb 2025",
 };
 
 // Roles from Profiles that may change payout details or apply for credit.
@@ -204,6 +213,14 @@ export const LENDER_TERMS: Record<
     ],
   },
 };
+
+// Main UI credit form: security a business can offer (typical for SME loans).
+export const SECURITY_OPTIONS = [
+  { value: "None", label: "No security", description: "Unsecured, based on your sales" },
+  { value: "Fixed deposit", label: "Fixed deposit" },
+  { value: "Property", label: "Property" },
+  { value: "Vehicle or equipment", label: "Vehicle or equipment" },
+];
 
 // Koko sales history used for eligibility (two demo scenarios).
 export const KOKO_SALES = {
