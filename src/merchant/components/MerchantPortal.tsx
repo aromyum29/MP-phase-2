@@ -14,7 +14,7 @@ import { PanelLeft } from "lucide-react"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
 import { cn } from "./ui/utils"
-import { navigationItems as baseNavigationItems, navigationGroups, financeNavigationItems, type NavigationItem } from "./NavigationData"
+import { navigationItems as baseNavigationItems, navigationGroups, groupedItemIcons, financeNavigationItems, type NavigationItem } from "./NavigationData"
 import { ImageWithFallback } from "./figma/ImageWithFallback"
 import { useTheme } from "./ThemeProvider"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
@@ -224,7 +224,8 @@ export function MerchantPortal({ children, onLogout }: MerchantPortalProps) {
     ? [{ id: 'original', title: '', label: 'Main navigation', items: navigationItems }]
     : navigationGroups.map(group => ({
     ...group,
-    items: group.items.flatMap(id => navigationItems.filter(item => item.id === id)),
+    items: group.items.flatMap(id => navigationItems.filter(item => item.id === id))
+      .map(item => (groupedItemIcons[item.id] ? { ...item, icon: groupedItemIcons[item.id] } : item)),
   }))
   useEffect(() => {
     if (previousIteration.current !== iteration) {

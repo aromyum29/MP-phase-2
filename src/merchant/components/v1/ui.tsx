@@ -575,6 +575,77 @@ export function DefinitionList({
 
 /* ---------- Tabs and filters ---------- */
 
+// Segmented control: tabs inside a grey track, the selected one raised.
+// Arrow keys move between tabs. `controls` names the panel they filter.
+export function SegmentedTabs({
+  value,
+  onChange,
+  items,
+  label,
+  controls,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  items: Array<{ value: string; label: string; count?: number }>;
+  label: string;
+  controls?: string;
+}) {
+  const refs = useRef<Array<HTMLButtonElement | null>>([]);
+  const move = (to: number) => {
+    const index = (to + items.length) % items.length;
+    onChange(items[index].value);
+    refs.current[index]?.focus();
+  };
+  return (
+    <div
+      role="tablist"
+      aria-label={label}
+      className="inline-flex max-w-full gap-1 overflow-x-auto rounded-xl bg-[#f3f3f5] p-1"
+    >
+      {items.map((item, index) => {
+        const active = item.value === value;
+        return (
+          <button
+            key={item.value}
+            ref={(element) => {
+              refs.current[index] = element;
+            }}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            aria-controls={controls}
+            tabIndex={active ? 0 : -1}
+            onClick={() => onChange(item.value)}
+            onKeyDown={(event) => {
+              const keys: Record<string, number> = {
+                ArrowRight: index + 1,
+                ArrowLeft: index - 1,
+                Home: 0,
+                End: items.length - 1,
+              };
+              if (event.key in keys) {
+                event.preventDefault();
+                move(keys[event.key]);
+              }
+            }}
+            className={cn(
+              "inline-flex min-h-[40px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900",
+              active
+                ? "bg-white text-gray-900 shadow-[0_1px_2px_rgba(16,24,40,0.08)]"
+                : "text-gray-600 hover:text-gray-900",
+            )}
+          >
+            {item.label}
+            {item.count !== undefined && (
+              <span className="text-xs tabular-nums text-muted-foreground">{item.count}</span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function UnderlineTabs({
   value,
   onChange,

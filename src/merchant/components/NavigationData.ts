@@ -14,7 +14,7 @@ import {
   UserGroupIcon,
   PhotoIcon,
   PuzzlePieceIcon,
-  SparklesIcon
+  TagIcon
 } from "@heroicons/react/24/outline"
 
 export interface NavigationItem {
@@ -104,10 +104,13 @@ export const navigationItems: NavigationItem[] = [
 ]
 
 // Shared grouping and order for desktop, collapsed, and mobile navigation.
+// Iteration 1 only: Marketing uses the megaphone, so Campaigns gets a tag.
+export const groupedItemIcons: Record<string, any> = { campaign: TagIcon }
+
 export const navigationGroups = [
   { id: 'primary', title: '', label: 'Main navigation', items: ['create-order', 'orders', 'analytics', 'static-qr'] },
   { id: 'finance', icon: WalletIcon, title: 'Finance', label: 'Finance', items: ['financial-statement', 'bank-account', 'merchant-loans'] },
-  { id: 'marketing', icon: SparklesIcon, title: 'Marketing', label: 'Marketing', items: ['campaign', 'koko-assets'] },
+  { id: 'marketing', icon: MegaphoneIcon, title: 'Marketing', label: 'Marketing', items: ['campaign', 'koko-assets'] },
   { id: 'developers', icon: CodeBracketIcon, title: 'Developers', label: 'Developers', items: ['plugins'] },
   { id: 'administration', icon: Cog6ToothIcon, title: 'Administration', label: 'Administration', items: ['profile-management', 'action-history'] },
 ]

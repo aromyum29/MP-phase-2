@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import {
-  BookOpen,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Copy,
   Download,
   Eye,
+  FileText,
   ImageOff,
   Search,
   X,
@@ -21,12 +21,12 @@ import {
 } from "../ui/dropdown-menu";
 import { cn } from "../ui/utils";
 import { useDemo, useFirstLoad } from "./demo";
-import { ASSETS, CATEGORIES, KIT, type AssetV1, type Variant } from "./assets-data";
+import { ASSETS, CATEGORIES, GUIDELINES, KIT, type AssetV1, type Variant } from "./assets-data";
 import { BRAND_COLOURS, BRAND_FONT } from "./placeholders";
 import {
   Btn,
   Card,
-  FilterChips,
+  SegmentedTabs,
   PageHeader,
   SkeletonBlock,
   StatusBadge,
@@ -117,10 +117,13 @@ export function KokoAssetsV1() {
       <V1Page>
         <PageHeader
           title="Koko assets"
-          description="Logos, artwork and campaign files for your website, social posts and shop."
+          description="Logos and artwork to promote Koko in your shop and online."
         />
         <div className="space-y-4" aria-busy="true" aria-label="Loading assets">
-          <SkeletonBlock className="h-28" />
+          <div className="grid gap-5 md:grid-cols-2">
+            <SkeletonBlock className="h-72 rounded-2xl" />
+            <SkeletonBlock className="h-72 rounded-2xl" />
+          </div>
           <SkeletonBlock className="h-11 w-full max-w-md" />
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {[0, 1, 2].map((item) => (
@@ -138,110 +141,118 @@ export function KokoAssetsV1() {
     <V1Page>
       <PageHeader
         title="Koko assets"
-        description="Logos, artwork and campaign files for your website, social posts and shop."
-        actions={
-          <Btn variant="secondary" onClick={() => setGuideOpen(true)}>
-            <BookOpen aria-hidden="true" />
-            Brand guidelines
-          </Btn>
-        }
+        description="Logos and artwork to promote Koko in your shop and online."
       />
 
-      <Card
-        className="flex flex-wrap items-center gap-x-6 gap-y-4 bg-[#eef6fa] p-4 sm:p-5"
-        aria-labelledby="kit-heading"
-      >
-        <div className="flex -space-x-3" aria-hidden="true">
-          {KIT.previews.map((asset) => (
-            <span
-              key={asset.id}
-              className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border-2 border-white bg-white shadow-sm"
-            >
-              <img
-                src={asset.url}
-                alt=""
-                className="h-full w-full object-contain p-1"
-                loading="lazy"
-              />
-            </span>
-          ))}
-        </div>
-        <div className="min-w-0 flex-1 basis-56">
-          <h2 id="kit-heading" className="text-lg font-semibold">
-            Starter kit
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            The logo, Koko's Picks, the astronaut and the retail illustration. 4 PNG files · ZIP ·{" "}
-            {fileSize(KIT.bytes)}
-          </p>
-        </div>
-        <Btn asChild>
-          <a
-            href={KIT.url}
-            download={KIT.filename}
-            onClick={(event) => download(event, "the starter kit", `ZIP · ${fileSize(KIT.bytes)}`)}
-          >
-            <Download aria-hidden="true" />
-            Download starter kit
-          </a>
-        </Btn>
-      </Card>
-
-      <section
-        aria-labelledby="colours-heading"
-        className="-mx-4 flex items-center gap-x-3 gap-y-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0"
-      >
-        <h2 id="colours-heading" className="shrink-0 text-sm font-semibold">
-          Brand colours
+      <section aria-labelledby="ka-start" className="grid gap-5 md:grid-cols-2">
+        <h2 id="ka-start" className="sr-only">
+          Start here
         </h2>
-        {BRAND_COLOURS.map((colour) => (
-          <button
-            key={colour.hex}
-            type="button"
-            aria-label={`Copy ${colour.name}, ${colour.hex}`}
-            onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(colour.hex);
-                notify(`Copied ${colour.hex}`, colour.name);
-              } catch {
-                notifyError("Couldn't copy", `Select and copy ${colour.hex} instead.`);
-              }
-            }}
-            className="inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-full border border-gray-300 bg-white py-1 pl-1.5 pr-3 text-sm transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 sm:min-h-[34px]"
-          >
-            <span
-              className="h-6 w-6 rounded-full border border-black/15"
-              style={{ backgroundColor: colour.hex }}
-              aria-hidden="true"
-            />
-            <span className="font-medium">{colour.name}</span>
-            <span className="font-mono text-xs text-muted-foreground">{colour.hex}</span>
-            <Copy className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
-          </button>
-        ))}
-        <span className="shrink-0 text-sm text-muted-foreground">Typeface: {BRAND_FONT}</span>
+        <DownloadCard
+          title="Starter kit"
+          body="The logo, Koko's Picks, the astronaut and the retail illustration."
+          meta={`ZIP · 4 PNG files · ${fileSize(KIT.bytes)}`}
+          preview={
+            <div className="flex -space-x-4" aria-hidden="true">
+              {KIT.previews.map((asset) => (
+                <span
+                  key={asset.id}
+                  className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border-2 border-white bg-white shadow-sm"
+                >
+                  <img src={asset.url} alt="" className="h-full w-full object-contain p-1.5" />
+                </span>
+              ))}
+            </div>
+          }
+          actions={
+            <Btn asChild size="lg" className="w-full shadow-md">
+              <a
+                href={KIT.url}
+                download={KIT.filename}
+                onClick={(event) =>
+                  download(event, "the starter kit", `ZIP · ${fileSize(KIT.bytes)}`)
+                }
+              >
+                <Download aria-hidden="true" />
+                Download starter kit
+              </a>
+            </Btn>
+          }
+        />
+        <DownloadCard
+          title="Brand guidelines"
+          body="How to use the Koko name, logo, colours and artwork."
+          meta={
+            <>
+              PDF · {fileSize(GUIDELINES.bytes)} ·{" "}
+              <button
+                type="button"
+                onClick={() => setGuideOpen(true)}
+                className="font-medium text-gray-900 underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
+              >
+                View online
+              </button>
+            </>
+          }
+          preview={
+            <div className="flex items-center gap-4" aria-hidden="true">
+              <span className="flex h-20 w-16 flex-col justify-between rounded-lg border border-gray-200 bg-white p-2 shadow-sm">
+                <FileText className="h-5 w-5 text-gray-700" />
+                <span className="text-xs font-semibold text-gray-900">PDF</span>
+              </span>
+              <span className="flex -space-x-2">
+                {BRAND_COLOURS.map((colour) => (
+                  <span
+                    key={colour.hex}
+                    className="h-10 w-10 rounded-full border-2 border-white shadow-sm"
+                    style={{ backgroundColor: colour.hex }}
+                  />
+                ))}
+              </span>
+              <span className="text-3xl font-bold text-gray-900">Aa</span>
+            </div>
+          }
+          actions={
+            <>
+              <Btn asChild size="lg" className="w-full shadow-md">
+                <a
+                  href={GUIDELINES.url}
+                  download={GUIDELINES.filename}
+                  onClick={(event) =>
+                    download(event, "the brand guidelines", `PDF · ${fileSize(GUIDELINES.bytes)}`)
+                  }
+                >
+                  <Download aria-hidden="true" />
+                  Download guidelines
+                </a>
+              </Btn>
+            </>
+          }
+        />
       </section>
 
-      <section aria-labelledby="library-heading" className="space-y-4">
-        <h2 id="library-heading" className="sr-only">
-          Asset library
-        </h2>
+      <section aria-labelledby="library-heading" className="space-y-5 pt-2">
+        <div>
+          <h2 id="library-heading" className="text-lg text-gray-900">
+            Looking for something specific?
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Browse every file by type, or search.
+          </p>
+        </div>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="-mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 sm:pb-0">
-            <div className="w-max sm:w-auto">
-              <FilterChips
-                label="Asset categories"
-                value={category}
-                onChange={setCategory}
-                items={CATEGORIES.map((item) => ({
-                  value: item,
-                  label: item === "All" ? "All assets" : item,
-                  count: counts[item],
-                }))}
-              />
-            </div>
-          </div>
-          <div className="relative w-full lg:w-[340px] lg:shrink-0">
+          <SegmentedTabs
+            label="Asset types"
+            controls="asset-results"
+            value={category}
+            onChange={setCategory}
+            items={CATEGORIES.map((item) => ({
+              value: item,
+              label: item === "All" ? "All" : item,
+              count: counts[item],
+            }))}
+          />
+          <div className="relative w-full lg:w-[300px] lg:shrink-0">
             <Search
               className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500"
               aria-hidden="true"
@@ -278,7 +289,7 @@ export function KokoAssetsV1() {
         </p>
 
         {results.length ? (
-          <ul className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          <ul id="asset-results" className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {results.map((asset) => (
               <li key={asset.id}>
                 <AssetCard
@@ -349,6 +360,37 @@ export function KokoAssetsV1() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-5 text-sm leading-relaxed">
+            <div>
+              <h3 className="font-semibold">Colours and typeface</h3>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {BRAND_COLOURS.map((colour) => (
+                  <button
+                    key={colour.hex}
+                    type="button"
+                    aria-label={`Copy ${colour.name}, ${colour.hex}`}
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(colour.hex);
+                        notify(`Copied ${colour.hex}`, colour.name);
+                      } catch {
+                        notifyError("Couldn't copy", `Select and copy ${colour.hex} instead.`);
+                      }
+                    }}
+                    className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-gray-300 bg-white py-1 pl-1.5 pr-3 text-sm transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 sm:min-h-[36px]"
+                  >
+                    <span
+                      className="h-6 w-6 rounded-full border border-black/15"
+                      style={{ backgroundColor: colour.hex }}
+                      aria-hidden="true"
+                    />
+                    <span className="font-medium">{colour.name}</span>
+                    <span className="font-mono text-xs text-muted-foreground">{colour.hex}</span>
+                    <Copy className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-muted-foreground">Typeface: {BRAND_FONT}</p>
+            </div>
             {[
               [
                 "Logo",
@@ -383,6 +425,33 @@ export function KokoAssetsV1() {
         </DialogContent>
       </Dialog>
     </V1Page>
+  );
+}
+
+// One of the two main downloads at the top of the page.
+function DownloadCard({
+  title,
+  body,
+  meta,
+  preview,
+  actions,
+}: {
+  title: string;
+  body: string;
+  meta: ReactNode;
+  preview: ReactNode;
+  actions: ReactNode;
+}) {
+  return (
+    <Card className="flex flex-col gap-5 p-5 sm:p-6">
+      <div className="flex h-36 items-center justify-center rounded-xl bg-[#f3f7fa]">{preview}</div>
+      <div className="flex-1">
+        <h3 className="text-base text-gray-900">{title}</h3>
+        <p className="mt-1 text-sm text-muted-foreground">{body}</p>
+        <p className="mt-2 text-xs text-muted-foreground">{meta}</p>
+      </div>
+      <div className="flex flex-col gap-2">{actions}</div>
+    </Card>
   );
 }
 
@@ -490,7 +559,7 @@ function AssetCard({
           )}
         </div>
         <div>
-          <h3 id={`asset-${asset.id}`} className="text-lg font-semibold">
+          <h3 id={`asset-${asset.id}`} className="text-base text-gray-900">
             {asset.title}
           </h3>
           <p className="mt-1 text-sm text-muted-foreground">{asset.usage}</p>

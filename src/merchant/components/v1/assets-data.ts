@@ -159,4 +159,11 @@ export const KIT = {
   bytes: catalogue.kitBytes,
   previews: ["logo", "social", "mascot", "pattern"].map((id) => base[id]),
 };
+// Placeholder guidelines PDF generated for the prototype. Replace with the
+// brand team's file before launch.
+export const GUIDELINES = {
+  url: "/koko-assets/koko-brand-guidelines.pdf",
+  filename: "koko-brand-guidelines.pdf",
+  bytes: 132772,
+};
 export const CATEGORIES = ["All", "Logos", "Social media", "Illustrations", "Campaigns"];
