@@ -312,7 +312,6 @@ export function BankAccountV1() {
           aria-busy="true"
           aria-label="Loading payout account"
         >
-          <SkeletonBlock className="h-10 rounded-xl" />
           <div className="grid grid-cols-[80px_minmax(0,1fr)] gap-4 sm:grid-cols-[112px_minmax(0,1fr)] sm:gap-x-6 lg:grid-cols-[128px_minmax(0,1fr)_272px]">
             <SkeletonBlock className="aspect-square w-full rounded-xl" />
             <div className="space-y-3 self-center">
@@ -352,13 +351,14 @@ export function BankAccountV1() {
               <StatusBar tone="info" className="text-sm">
                 Approved · Payouts start {fmtDateTime(activeFrom)}
               </StatusBar>
-            ) : (
-              <StatusBar tone="active" className="text-sm">
-                Active
-              </StatusBar>
-            )}
+            ) : null}
 
-            <div className="mt-6 grid grid-cols-[80px_minmax(0,1fr)] gap-x-4 gap-y-6 sm:grid-cols-[112px_minmax(0,1fr)] sm:gap-x-6 lg:grid-cols-[128px_minmax(0,1fr)_272px]">
+            <div
+              className={cn(
+                (pending || activeFrom) && "mt-6",
+                "grid grid-cols-[80px_minmax(0,1fr)] gap-x-4 gap-y-6 sm:grid-cols-[112px_minmax(0,1fr)] sm:gap-x-6 lg:grid-cols-[128px_minmax(0,1fr)_272px]",
+              )}
+            >
               <div
                 className="flex aspect-square w-full items-center justify-center rounded-xl bg-[#f3f3f5]"
                 aria-hidden="true"
