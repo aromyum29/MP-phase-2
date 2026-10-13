@@ -26,7 +26,7 @@ import { BRAND_COLOURS, BRAND_FONT } from "./placeholders";
 import {
   Btn,
   Card,
-  SegmentedTabs,
+  UnderlineTabs,
   PageHeader,
   SkeletonBlock,
   StatusBadge,
@@ -240,8 +240,8 @@ export function KokoAssetsV1() {
             Browse every file by type, or search.
           </p>
         </div>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <SegmentedTabs
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
+          <UnderlineTabs
             label="Asset types"
             controls="asset-results"
             value={category}

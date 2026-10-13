@@ -646,16 +646,19 @@ export function SegmentedTabs({
   );
 }
 
+// Underline tabs with count pills, matching the Orders status tabs.
 export function UnderlineTabs({
   value,
   onChange,
   items,
   label,
+  controls,
 }: {
   value: string;
   onChange: (value: string) => void;
   items: Array<{ value: string; label: string; count?: number }>;
   label: string;
+  controls?: string;
 }) {
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
   const move = (to: number) => {
@@ -664,48 +667,56 @@ export function UnderlineTabs({
     refs.current[index]?.focus();
   };
   return (
-    <div role="tablist" aria-label={label} className="flex w-full gap-6 border-b border-border">
-      {items.map((item, index) => {
-        const active = item.value === value;
-        return (
-          <button
-            key={item.value}
-            ref={(element) => {
-              refs.current[index] = element;
-            }}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            tabIndex={active ? 0 : -1}
-            onClick={() => onChange(item.value)}
-            onKeyDown={(event) => {
-              const keys: Record<string, number> = {
-                ArrowRight: index + 1,
-                ArrowLeft: index - 1,
-                Home: 0,
-                End: items.length - 1,
-              };
-              if (event.key in keys) {
-                event.preventDefault();
-                move(keys[event.key]);
-              }
-            }}
-            className={cn(
-              "-mb-px inline-flex min-h-[44px] items-center gap-2 rounded-t-sm border-b-2 pb-2 pt-1 text-base font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900",
-              active
-                ? "border-gray-900 text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {item.label}
-            {item.count !== undefined && (
-              <span className="rounded-full bg-[#ececf0] px-2 py-0.5 text-xs tabular-nums text-foreground">
-                {item.count}
-              </span>
-            )}
-          </button>
-        );
-      })}
+    <div className="w-full border-b border-border">
+      <div role="tablist" aria-label={label} className="flex gap-4 overflow-x-auto sm:gap-6">
+        {items.map((item, index) => {
+          const active = item.value === value;
+          return (
+            <button
+              key={item.value}
+              ref={(element) => {
+                refs.current[index] = element;
+              }}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              aria-controls={controls}
+              tabIndex={active ? 0 : -1}
+              onClick={() => onChange(item.value)}
+              onKeyDown={(event) => {
+                const keys: Record<string, number> = {
+                  ArrowRight: index + 1,
+                  ArrowLeft: index - 1,
+                  Home: 0,
+                  End: items.length - 1,
+                };
+                if (event.key in keys) {
+                  event.preventDefault();
+                  move(keys[event.key]);
+                }
+              }}
+              className={cn(
+                "-mb-px flex min-h-[44px] shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 pb-2 pt-1 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900",
+                active
+                  ? "border-gray-900 font-semibold text-gray-900"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {item.label}
+              {item.count !== undefined && (
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 text-xs leading-none tabular-nums",
+                    active ? "bg-gray-900 text-white" : "bg-[#ececf0] text-muted-foreground",
+                  )}
+                >
+                  {item.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
