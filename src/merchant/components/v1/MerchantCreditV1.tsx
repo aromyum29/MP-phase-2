@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ExternalLink,
+  HelpCircle,
   FileText,
   Lock,
   ShieldCheck,
@@ -66,10 +67,44 @@ import {
   statusLabel,
   type TimelineItem,
 } from "./ui";
-import { firstChangeStep, resubmitDraft } from "./scenarios";
+import { INTRO_KEY, INTRO_RESET_EVENT, firstChangeStep, resubmitDraft } from "./scenarios";
 import { VIEW_KEYS, useOptionalParam, useSetSearch, useViewParam } from "./url";
 
 type AnyLoan = LoanRequest | CancelledLoanRequest;
+const HOW_STEPS: Array<[string, string]> = [
+  ["Apply in about 5 minutes", "Most details are filled in from your Koko profile and sales."],
+  ["Sampath Bank decides", "Usually in about 5 business days. You see the offer first."],
+  [
+    "Get funded, repay the bank",
+    "The bank pays into your business account. You repay Sampath Bank monthly.",
+  ],
+];
+const FAQ: Array<[string, string]> = [
+  [
+    "Who lends the money?",
+    "Sampath Bank. Koko doesn't lend. With your permission, Koko shares your sales history and business details so the bank can decide faster.",
+  ],
+  [
+    "How do I repay?",
+    "Directly to Sampath Bank, in monthly instalments over the period you agree with the bank. Your Koko payouts aren't affected.",
+  ],
+  [
+    "What does it cost?",
+    "Sampath Bank sets the interest rate and any fees. You see the full offer before you agree to anything.",
+  ],
+  [
+    "Who can apply?",
+    "Businesses selling with Koko for at least 6 months, with LKR 300,000 or more in average monthly Koko sales.",
+  ],
+  [
+    "What does the bank check?",
+    "Your Koko sales, your bank statements and, with your permission, a credit report from the Credit Information Bureau of Sri Lanka (CRIB).",
+  ],
+  [
+    "What if the bank says no or asks for changes?",
+    "You'll see the reason in Requests. If the bank asks for changes, you can update your request and send it again.",
+  ],
+];
 const STEPS = ["Credit needs", "Business details", "Finances and documents", "Review and submit"];
 const EMPLOYEE_RANGES = ["1–10", "11–50", "51–100", "100+"];
 // Business details already verified at onboarding (KYC), shown read-only.
@@ -160,6 +195,30 @@ export function MerchantCreditV1() {
   const [discarding, setDiscarding] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState<string | null>(null);
+  // First-visit explainer. Dismissing it is remembered on this device.
+  const [introSeen, setIntroSeen] = useState<boolean | null>(null);
+  useEffect(() => {
+    const read = () => {
+      try {
+        setIntroSeen(localStorage.getItem(INTRO_KEY) === "1");
+      } catch {
+        setIntroSeen(false);
+      }
+    };
+    read();
+    // The "first visit" scenario clears the flag while the page may be open.
+    window.addEventListener(INTRO_RESET_EVENT, read);
+    return () => window.removeEventListener(INTRO_RESET_EVENT, read);
+  }, []);
+  const dismissIntro = () => {
+    setIntroSeen(true);
+    try {
+      localStorage.setItem(INTRO_KEY, "1");
+    } catch {
+      /* Shown again next visit. */
+    }
+  };
+  const [howOpen, setHowOpen] = useState(false);
   const cancelAction = useAction();
   useEffect(() => {
     if (!freshLoad) return;
@@ -334,6 +393,16 @@ export function MerchantCreditV1() {
       <PageHeader
         title="Merchant credit"
         description="Funding for your business from Koko and our partner bank."
+        actions={
+          <Btn
+            variant="tertiary"
+            className="-ml-3 sm:-mr-3 sm:ml-0"
+            onClick={() => setHowOpen(true)}
+          >
+            <HelpCircle aria-hidden="true" />
+            How merchant credit works
+          </Btn>
+        }
       />
       <UnderlineTabs
         label="Merchant credit"
@@ -347,6 +416,45 @@ export function MerchantCreditV1() {
 
       {tab === "banks" ? (
         <div className="max-w-[880px] space-y-8">
+          {introSeen === false && (
+            <section
+              aria-labelledby="mc-intro"
+              className="rounded-2xl border border-[#BDDCEE] bg-[#f1f7fb] p-5 sm:p-6"
+            >
+              <h2 id="mc-intro" className="text-base text-gray-900">
+                New to merchant credit?
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm text-gray-700">
+                Get funding for your business from Sampath Bank, applied for through Koko. Koko
+                shares your sales history so you can apply in minutes, and you repay the bank
+                directly.
+              </p>
+              <ol className="mt-5 grid gap-4 sm:grid-cols-3">
+                {HOW_STEPS.map(([title, body], index) => (
+                  <li key={title} className="flex gap-3">
+                    <span
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-900 text-xs font-semibold text-white"
+                      aria-hidden="true"
+                    >
+                      {index + 1}
+                    </span>
+                    <span className="text-sm">
+                      <span className="block font-medium text-gray-900">{title}</span>
+                      <span className="block text-muted-foreground">{body}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+              <div className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                <Btn variant="secondary" onClick={dismissIntro}>
+                  Got it
+                </Btn>
+                <Btn variant="tertiary" onClick={() => setHowOpen(true)}>
+                  Learn more
+                </Btn>
+              </div>
+            </section>
+          )}
           {lenders.map((lender) => {
             const terms = LENDER_TERMS[lender.id];
             const active = activeFor(lender.id);
@@ -457,73 +565,29 @@ export function MerchantCreditV1() {
                     id={`mc-details-${lender.id}`}
                     className="mt-6 grid gap-6 border-t border-gray-100 pt-6 sm:grid-cols-2"
                   >
-                    <section aria-labelledby={`mc-how-${lender.id}`}>
-                      <h3
-                        id={`mc-how-${lender.id}`}
-                        className="text-sm font-semibold text-gray-900"
-                      >
-                        How it works
-                      </h3>
-                      <ol className="mt-3 space-y-3">
-                        {[
-                          ["Apply in about 5 minutes", "Most details come from your Koko profile."],
-                          ["Sampath Bank decides", `Usually in ${terms.decision}.`],
-                          ["Get funded", "If accepted, you sign the agreement with the bank."],
-                        ].map(([title, body], index) => (
-                          <li key={title} className="flex gap-3">
-                            <span
-                              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-900 text-xs font-semibold text-white"
-                              aria-hidden="true"
-                            >
-                              {index + 1}
-                            </span>
-                            <span className="text-sm">
-                              <span className="block font-medium text-gray-900">{title}</span>
-                              <span className="block text-muted-foreground">{body}</span>
-                            </span>
-                          </li>
-                        ))}
-                      </ol>
-                    </section>
-                    <div className="space-y-5">
-                      <section aria-labelledby={`mc-need-${lender.id}`}>
-                        <h3
-                          id={`mc-need-${lender.id}`}
-                          className="text-sm font-semibold text-gray-900"
-                        >
-                          Who can apply
-                        </h3>
-                        <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                          <li>At least {terms.minMonths} months selling with Koko</li>
-                          <li>
-                            {lkr(terms.minMonthlySales)} or more in average monthly Koko sales
-                          </li>
-                        </ul>
+                    {[
+                      [
+                        "Who can apply",
+                        `Businesses selling with Koko for at least ${terms.minMonths} months, with ${lkr(terms.minMonthlySales)} or more in average monthly Koko sales.`,
+                      ],
+                      [
+                        "Interest and fees",
+                        `${terms.rates}. You see the offer before you agree to anything.`,
+                      ],
+                      [
+                        "What you'll need",
+                        "Bank statements for the last 6 months. Your registration certificate and director NIC are already on file from your Koko verification.",
+                      ],
+                      [
+                        "Repayment",
+                        `Monthly instalments paid directly to ${lender.name}. Your Koko payouts aren't affected.`,
+                      ],
+                    ].map(([title, body]) => (
+                      <section key={title}>
+                        <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+                        <p className="mt-2 text-sm text-muted-foreground">{body}</p>
                       </section>
-                      <section aria-labelledby={`mc-docs-${lender.id}`}>
-                        <h3
-                          id={`mc-docs-${lender.id}`}
-                          className="text-sm font-semibold text-gray-900"
-                        >
-                          What you'll need
-                        </h3>
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          Bank statements for the last 6 months. Your registration certificate and
-                          director NIC are already on file from your Koko verification.
-                        </p>
-                      </section>
-                      <section aria-labelledby={`mc-rates-${lender.id}`}>
-                        <h3
-                          id={`mc-rates-${lender.id}`}
-                          className="text-sm font-semibold text-gray-900"
-                        >
-                          Interest and fees
-                        </h3>
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          {terms.rates}. You see the offer before you agree to anything.
-                        </p>
-                      </section>
-                    </div>
+                    ))}
                   </div>
                 )}
               </Card>
@@ -834,6 +898,59 @@ export function MerchantCreditV1() {
             }
           />
         )}
+      </Drawer>
+
+      <Drawer
+        open={howOpen}
+        onOpenChange={setHowOpen}
+        title="How merchant credit works"
+        description="Business funding from Sampath Bank, applied for through Koko."
+        footer={
+          canManage && eligibility.eligible && !activeFor("sampath") ? (
+            <Btn
+              block
+              className="sm:w-full"
+              onClick={() => {
+                setHowOpen(false);
+                dismissIntro();
+                startApplication("sampath");
+              }}
+            >
+              Request merchant credit
+              <ArrowRight aria-hidden="true" />
+            </Btn>
+          ) : undefined
+        }
+      >
+        <div className="space-y-7">
+          <ol className="space-y-4">
+            {HOW_STEPS.map(([title, body], index) => (
+              <li key={title} className="flex gap-3">
+                <span
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-900 text-xs font-semibold text-white"
+                  aria-hidden="true"
+                >
+                  {index + 1}
+                </span>
+                <span className="text-sm">
+                  <span className="block font-medium text-gray-900">{title}</span>
+                  <span className="block text-muted-foreground">{body}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+          <section aria-labelledby="mc-faq" className="space-y-5 border-t border-gray-100 pt-6">
+            <h3 id="mc-faq" className="text-sm font-semibold text-gray-900">
+              Common questions
+            </h3>
+            {FAQ.map(([question, answer]) => (
+              <div key={question}>
+                <h4 className="text-sm font-medium text-gray-900">{question}</h4>
+                <p className="mt-1 text-sm text-muted-foreground">{answer}</p>
+              </div>
+            ))}
+          </section>
+        </div>
       </Drawer>
     </V1Page>
   );
