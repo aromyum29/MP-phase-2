@@ -46,6 +46,7 @@ import {
   InlineAlert,
   PageHeader,
   RadioCards,
+  SelectInput,
   SkeletonBlock,
   StatusBadge,
   DoneCard,
@@ -69,6 +70,7 @@ import { useOptionalParam, useSetSearch, useViewParam } from "./url";
 
 type AnyLoan = LoanRequest | CancelledLoanRequest;
 const STEPS = ["Credit needs", "Business details", "Finances and documents", "Review and submit"];
+const EMPLOYEE_RANGES = ["1–10", "11–50", "51–100", "100+"];
 // Business details already verified at onboarding (KYC), shown read-only.
 const KYC_ITEMS: Array<[string, string]> = [
   ["Registered name", BUSINESS.name],
@@ -1094,8 +1096,7 @@ function Application({
         next["mc-security"] = "Choose the security you can offer, or No security.";
     }
     if (index === 1) {
-      if (!Number(form.employees))
-        next["mc-employees"] = "Enter how many people work in the business.";
+      if (!form.employees) next["mc-employees"] = "Enter how many people work in the business.";
       if (!form.contact.trim())
         next["mc-contact"] = "Enter the name of the person the bank should contact.";
       if (!form.designation?.trim()) next["mc-designation"] = "Enter their role in the business.";
@@ -1287,16 +1288,16 @@ function Application({
                 </InlineAlert>
               )}
             </div>
-            <RadioCards
-              name="mc-purpose"
-              legend="What's it for?"
+            <SelectInput
+              id="mc-purpose"
+              label="What's it for?"
+              placeholder="Choose a purpose"
               value={form.purpose}
               onChange={(value) => {
                 update("purpose", value);
                 touch("mc-purpose");
               }}
               error={shown("mc-purpose")}
-              columns={3}
               options={PURPOSES.map((value) => ({ value, label: PURPOSE_LABELS[value] }))}
             />
             {form.purpose === "Other" && (
@@ -1315,9 +1316,10 @@ function Application({
                 }
               />
             )}
-            <RadioCards
-              name="mc-term"
-              legend="Repayment period"
+            <SelectInput
+              id="mc-term"
+              label="Repayment period"
+              placeholder="Choose a period"
               hint="The bank confirms the final term."
               value={form.term}
               onChange={(value) => {
@@ -1325,16 +1327,16 @@ function Application({
                 touch("mc-term");
               }}
               error={shown("mc-term")}
-              columns={4}
               options={terms.terms.map((months) => ({
                 value: String(months),
                 label: `${months} months`,
               }))}
             />
-            <RadioCards
-              name="mc-security"
-              legend="Security you can offer"
-              hint="Optional security can help with larger amounts. The bank confirms what it needs."
+            <SelectInput
+              id="mc-security"
+              label="Security you can offer"
+              placeholder="Choose security"
+              hint="Security can help with larger amounts. Choose No security for an unsecured request."
               value={form.security ?? ""}
               onChange={(value) => {
                 update("security", value);
@@ -1366,19 +1368,18 @@ function Application({
                 Something out of date? Update it in Profiles before you apply.
               </p>
             </section>
-            <TextInput
+            <SelectInput
               id="mc-employees"
               label="Number of employees"
-              inputMode="numeric"
-              autoComplete="off"
-              placeholder="For example, 12"
+              placeholder="Choose a range"
               value={form.employees ?? ""}
-              onChange={(event) =>
-                update("employees", event.target.value.replace(/\D/g, "").slice(0, 5))
-              }
-              onBlur={() => touch("mc-employees")}
+              onChange={(value) => {
+                update("employees", value);
+                touch("mc-employees");
+              }}
               error={shown("mc-employees")}
               hint="Include yourself and any part-time staff."
+              options={EMPLOYEE_RANGES.map((value) => ({ value, label: value }))}
             />
             <div className="grid gap-7 sm:grid-cols-2 sm:gap-5">
               <TextInput

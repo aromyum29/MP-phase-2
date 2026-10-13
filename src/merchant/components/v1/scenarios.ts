@@ -46,7 +46,7 @@ function changesRequested(): LoanRequest {
       security: "None",
       business: BUSINESS.name,
       registration: BUSINESS.registration,
-      employees: "14",
+      employees: "11–50",
       contact: CURRENT_USER.name,
       designation: "Director",
       phone: CURRENT_USER.mobile,

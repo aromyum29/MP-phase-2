@@ -216,7 +216,7 @@ export const LENDER_TERMS: Record<
 
 // Main UI credit form: security a business can offer (typical for SME loans).
 export const SECURITY_OPTIONS = [
-  { value: "None", label: "No security", description: "Unsecured, based on your sales" },
+  { value: "None", label: "No security (unsecured)" },
   { value: "Fixed deposit", label: "Fixed deposit" },
   { value: "Property", label: "Property" },
   { value: "Vehicle or equipment", label: "Vehicle or equipment" },
