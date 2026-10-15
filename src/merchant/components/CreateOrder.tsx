@@ -30,6 +30,9 @@ interface CreateOrderProps {
   onNavigateToOrders?: () => void
   onStepChange?: (step: Step) => void
   formCardRef?: React.Ref<HTMLDivElement>
+  // Iteration 1 showcase: open on a sample success screen with an extra note.
+  demoSuccess?: boolean
+  successExtra?: React.ReactNode
 }
 
 type PaymentMethod = 'qr-code' | 'sms-link' | null
@@ -84,8 +87,13 @@ function OrderBreakdown({ orderData, showDiscount = true }: { orderData: OrderDa
   )
 }
 
-export function CreateOrder({ onBack, onNavigateToOrders, onStepChange, formCardRef }: CreateOrderProps) {
-  const [step, setStep] = useState<Step>('form')
+export function CreateOrder({ onBack, onNavigateToOrders, onStepChange, formCardRef, demoSuccess = false, successExtra }: CreateOrderProps) {
+  const [step, setStep] = useState<Step>(demoSuccess ? 'payment-success' : 'form')
+  useEffect(() => {
+    // Report the starting step so the page background matches it.
+    onStepChange?.(demoSuccess ? 'payment-success' : 'form')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   
   // Notify parent component when step changes
   const updateStep = (newStep: Step) => {
@@ -94,10 +102,9 @@ export function CreateOrder({ onBack, onNavigateToOrders, onStepChange, formCard
   }
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [orderData, setOrderData] = useState<OrderData>({
-    amount: '',
-    reference: ''
-  })
+  const [orderData, setOrderData] = useState<OrderData>(demoSuccess
+    ? { amount: '12500', reference: 'INV-2041', orderNumber: 'KO-248170' }
+    : { amount: '', reference: '' })
   const [smsPhoneNumber, setSmsPhoneNumber] = useState('')
   const [sendSMS, setSendSMS] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -844,6 +851,7 @@ export function CreateOrder({ onBack, onNavigateToOrders, onStepChange, formCard
               View Orders
             </Button>
           </div>
+          {successExtra}
         </motion.div>
       </div>
     )

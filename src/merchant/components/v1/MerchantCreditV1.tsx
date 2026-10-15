@@ -68,7 +68,7 @@ import {
   statusLabel,
   type TimelineItem,
 } from "./ui";
-import { INTRO_RESET_EVENT, firstChangeStep, resubmitDraft } from "./scenarios";
+import { INTRO_RESET_EVENT, introState, firstChangeStep, resubmitDraft } from "./scenarios";
 import { VIEW_KEYS, useOptionalParam, useSetSearch, useViewParam } from "./url";
 
 type AnyLoan = LoanRequest | CancelledLoanRequest;
@@ -165,7 +165,6 @@ function useEligibility() {
 // with the data (see FinanceDataProvider). Only views restored from the URL the
 // page loaded with are closed, not ones opened later (e.g. by a scenario).
 let freshLoad = true;
-let introDismissed = false;
 const loadedWithView =
   typeof window !== "undefined" &&
   ["apply", "request"].some((key) => new URLSearchParams(window.location.search).has(key));
@@ -189,13 +188,13 @@ export function MerchantCreditV1() {
   const [detailsOpen, setDetailsOpen] = useState<string | null>(null);
   // Intro shown on every page load. Got it folds it into the header link
   // (until the next reload), and the link opens it again.
-  const [introSeen, setIntroSeen] = useState(introDismissed);
-  const [introOpen, setIntroOpen] = useState(!introDismissed);
+  const [introSeen, setIntroSeen] = useState(introState.dismissed);
+  const [introOpen, setIntroOpen] = useState(!introState.dismissed);
   const [helpPing, setHelpPing] = useState(false);
   const introTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const showIntro = () => {
     clearTimeout(introTimer.current);
-    introDismissed = false;
+    introState.dismissed = false;
     setIntroStep(0);
     setIntroSeen(false);
     // Mount folded, then unfold on the next frame so it animates in.
@@ -210,7 +209,7 @@ export function MerchantCreditV1() {
     };
   }, []);
   const dismissIntro = () => {
-    introDismissed = true;
+    introState.dismissed = true;
     setIntroOpen(false);
     clearTimeout(introTimer.current);
     introTimer.current = setTimeout(() => {

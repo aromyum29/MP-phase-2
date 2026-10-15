@@ -5,6 +5,7 @@ import { FinanceDataProvider } from "./components/FinanceData"
 import { IterationProvider } from "./components/IterationProvider"
 import { DemoProvider } from "./components/v1/demo"
 import { DemoPanel } from "./components/v1/DemoPanel"
+import { ShowcaseBar, ShowcaseProvider } from "./components/v1/showcase"
 import { MerchantPortal } from "./components/MerchantPortal"
 import { Toaster } from "./components/ui/sonner"
 import { toast } from "sonner"
@@ -56,10 +57,12 @@ export default function App() {
     <IterationProvider>
     <FinanceDataProvider>
     <DemoProvider>
+    <ShowcaseProvider>
     <ThemeProvider>
       <div className="h-screen w-screen overflow-x-hidden">
         <MerchantPortal />
         <DemoPanel />
+        <ShowcaseBar />
         <Toaster
           position="bottom-right"
           toastOptions={{
@@ -76,6 +79,7 @@ export default function App() {
         />
       </div>
     </ThemeProvider>
+    </ShowcaseProvider>
     </DemoProvider>
     </FinanceDataProvider>
     </IterationProvider>

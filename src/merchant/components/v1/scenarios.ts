@@ -13,6 +13,8 @@ import { VIEW_KEYS, useSetSearch } from "./url";
 // Each one loads sample data and opens the view where it can be seen.
 export type Scenario = { id: string; label: string; description: string };
 // Merchant credit intro: shows on each page load; this event brings it back.
+// Shared so a scenario can reset it even when the page isn't open.
+export const introState = { dismissed: false };
 export const INTRO_RESET_EVENT = "koko-credit-intro-reset";
 
 export const SCENARIOS: Scenario[] = [
@@ -101,6 +103,7 @@ export function useRunScenario() {
   const clear = Object.fromEntries(VIEW_KEYS.map((key) => [key, null]));
   return (id: string) => {
     if (id === "credit-first-visit") {
+      introState.dismissed = false;
       window.dispatchEvent(new Event(INTRO_RESET_EVENT));
       update({ eligibility: "eligible", role: "Super Admin" });
       setSearch({ ...clear, page: "merchant-loans" });

@@ -12,6 +12,7 @@ import {
 import { usePortalIteration } from "./IterationProvider"
 import { useDemo } from "./v1/demo"
 import { SCENARIOS, useRunScenario } from "./v1/scenarios"
+import { SHOWCASES, useShowcase } from "./v1/showcase"
 import { cn } from "./ui/utils"
 
 export function VersionSwitcher({ collapsed = false, onOpenComponents, onNavigate }: { collapsed?: boolean; onOpenComponents?: () => void; onNavigate?: () => void }) {
@@ -19,6 +20,7 @@ export function VersionSwitcher({ collapsed = false, onOpenComponents, onNavigat
   const uiName = iteration === "1" ? "Main UI" : "Alternate UI"
   const { setPanelOpen } = useDemo()
   const runScenario = useRunScenario()
+  const showcase = useShowcase()
 
   return (
     <DropdownMenu>
@@ -50,7 +52,7 @@ export function VersionSwitcher({ collapsed = false, onOpenComponents, onNavigat
         side="top"
         align="start"
         sideOffset={8}
-        className="z-[60] w-72 rounded-xl p-2 shadow-xl"
+        className="z-[60] max-h-[calc(100dvh-120px)] w-72 overflow-y-auto rounded-xl p-2 shadow-xl"
       >
         <DropdownMenuLabel className="text-xs text-muted-foreground">Version switcher</DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -86,6 +88,21 @@ export function VersionSwitcher({ collapsed = false, onOpenComponents, onNavigat
               <span className="flex flex-col">
                 <span>{scenario.label}</span>
                 <span className="text-xs text-muted-foreground">{scenario.description}</span>
+              </span>
+            </DropdownMenuItem>
+          ))}
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="text-xs text-muted-foreground">New update ideas</DropdownMenuLabel>
+          {SHOWCASES.map((item, index) => (
+            <DropdownMenuItem
+              key={item.id}
+              onSelect={() => { showcase.start(item.id); onNavigate?.() }}
+              className="min-h-11 cursor-pointer items-start gap-2 rounded-lg"
+            >
+              <span className={cn("mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold", showcase.mode === item.id ? "bg-gray-900 text-white" : "bg-muted text-foreground")} aria-hidden="true">{index + 1}</span>
+              <span className="flex flex-col">
+                <span>{item.label}{showcase.mode === item.id && <span className="sr-only"> (showing)</span>}</span>
+                <span className="text-xs text-muted-foreground">{item.description}</span>
               </span>
             </DropdownMenuItem>
           ))}

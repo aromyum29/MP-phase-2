@@ -40,6 +40,7 @@ import { FeatureAnnouncement, defaultAnnouncement, type AnnouncementContent } fr
 import { FinanceWorkspace, type FinanceSection } from "./FinanceWorkspace"
 import { MerchantCreditV1 } from "./v1/MerchantCreditV1"
 import { MerchantCreditAlt } from "./v1/MerchantCreditAlt"
+import { NewDot, NewTag, SuccessNote, UpdateStrip, WhatsNewButton, WhatsNewPanel, useShowcase } from "./v1/showcase"
 import { ActionHistory } from "./ActionHistory"
 import { ProfileManagement } from "./ProfileManagement"
 import { KokoAssets } from "./tools/KokoAssets"
@@ -197,6 +198,17 @@ export function MerchantPortal({ children, onLogout }: MerchantPortalProps) {
   const [openGroup, setOpenGroup] = useState<string | null>(() => (iteration === '1' && urlPage ? groupFor(urlPage) : null))
   const createOrderCardRef = useRef<HTMLDivElement>(null)
   const [announcement, setAnnouncement] = useState<AnnouncementContent | null>(null)
+  // Iteration 1 "New update ideas" showcase (inactive unless picked in the Version switcher).
+  const showcase = useShowcase()
+  const showcaseOn = iteration === '1' && showcase.mode !== null
+  useEffect(() => {
+    if (showcaseOn) showcase.markSeen(currentPage)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, showcaseOn])
+  useEffect(() => {
+    if (iteration !== '1' && showcase.mode) showcase.exit()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [iteration])
   // Iteration 1: the first portal entry in a browser session stands in for
   // signing in, so the update shows once, full page on the login background.
   useEffect(() => {
@@ -489,7 +501,7 @@ export function MerchantPortal({ children, onLogout }: MerchantPortalProps) {
                     } else toggleGroup(group.id)
                   }} aria-label={group.title} title={isSidebarCollapsed ? group.title : undefined} aria-expanded={!isSidebarCollapsed && openGroup === group.id} aria-controls={`desktop-group-${group.id}`} className={cn("flex h-10 w-full items-center rounded-lg px-3 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-button-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", isSidebarCollapsed ? "justify-center" : "gap-2.5")}>
                     <group.icon className="h-[18px] w-[18px] shrink-0 text-sidebar-foreground/60" />
-                    {!isSidebarCollapsed && <><span>{group.title}</span><ChevronDownIcon className={cn("ml-auto h-3.5 w-3.5 text-sidebar-foreground/60 transition-transform", openGroup === group.id && "rotate-180")} /></>}
+                    {!isSidebarCollapsed && <><span>{group.title}</span>{showcase.groupHasNew(group.id) && openGroup !== group.id && <NewDot />}<ChevronDownIcon className={cn("ml-auto h-3.5 w-3.5 text-sidebar-foreground/60 transition-transform", openGroup === group.id && "rotate-180")} /></>}
                   </button>}
                   <div id={`desktop-group-${group.id}`} hidden={!!group.title && (isSidebarCollapsed || openGroup !== group.id)} className={cn(iteration === '1' ? "space-y-0.5" : "space-y-1", group.title && "ml-4 border-l border-border/50 pl-1")}>
               {group.items.map((item) => (
@@ -552,6 +564,7 @@ export function MerchantPortal({ children, onLogout }: MerchantPortalProps) {
                         )}>
                           {item.title}
                         </span>
+                        {showcase.isNew(item.id) && <NewTag />}
 
                         {shouldShowCampaignNotification(item) && (
                           <div className="ml-auto">
@@ -613,6 +626,7 @@ export function MerchantPortal({ children, onLogout }: MerchantPortalProps) {
           </nav>
 
           <div className={cn("shrink-0 pb-3 pt-2", isSidebarCollapsed ? "px-3" : "px-5")}>
+            <WhatsNewButton collapsed={isSidebarCollapsed} />
             <VersionSwitcher collapsed={isSidebarCollapsed} onOpenComponents={() => setCurrentPage('modular-components')} />
           </div>
 
@@ -701,6 +715,7 @@ export function MerchantPortal({ children, onLogout }: MerchantPortalProps) {
                       {group.title && <button type="button" onClick={() => toggleGroup(group.id)} aria-expanded={openGroup === group.id} aria-controls={`mobile-group-${group.id}`} className={cn("flex h-11 w-full items-center gap-2.5 rounded-lg px-3 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-button-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring")}>
                         <group.icon className="h-[18px] w-[18px] shrink-0 text-sidebar-foreground/60" />
                         <span>{group.title}</span>
+                        {showcase.groupHasNew(group.id) && openGroup !== group.id && <NewDot />}
                         <ChevronDownIcon className={cn("ml-auto h-3.5 w-3.5 text-sidebar-foreground/60 transition-transform", openGroup === group.id && "rotate-180")} />
                       </button>}
                       <div id={`mobile-group-${group.id}`} hidden={!!group.title && openGroup !== group.id} className={cn(iteration === '1' ? "space-y-0.5" : "space-y-3", group.title && "ml-4 border-l border-border/50 pl-1")}>
@@ -721,6 +736,7 @@ export function MerchantPortal({ children, onLogout }: MerchantPortalProps) {
                         <div className={cn("flex items-center", iteration === '1' ? "gap-2.5" : "gap-4")}>
                           <item.icon className={iteration === '1' ? "h-4 w-4" : "h-5 w-5"} />
                           <span className="font-medium">{item.title}</span>
+                          {showcase.isNew(item.id) && <NewTag />}
                           {shouldShowCampaignNotification(item) && (
                             <div className="h-4 w-4 text-[#BDDDEE] animate-pulse">
                               <HIconSolidBell />
@@ -779,6 +795,7 @@ export function MerchantPortal({ children, onLogout }: MerchantPortalProps) {
               </nav>
 
               <div className="shrink-0 px-6 pb-4">
+                <WhatsNewButton />
                 <VersionSwitcher onOpenComponents={() => { setCurrentPage('modular-components'); setIsMobileMenuOpen(false) }} onNavigate={() => setIsMobileMenuOpen(false)} />
               </div>
 
@@ -825,6 +842,8 @@ export function MerchantPortal({ children, onLogout }: MerchantPortalProps) {
           </Button>
         </div>
         
+        {iteration === '1' && <UpdateStrip />}
+        {iteration === '1' && <WhatsNewPanel />}
         {/* Page Content */}
         <main 
           className={cn(
@@ -844,7 +863,7 @@ export function MerchantPortal({ children, onLogout }: MerchantPortalProps) {
           )}>
             {children || (
             currentPage === 'create-order' ? (
-              <CreateOrder formCardRef={iteration === '1' ? createOrderCardRef : undefined} onStepChange={handleCreateOrderStepChange} onNavigateToOrders={() => handleNavigateToOrders('pending')} />
+              <CreateOrder key={showcaseOn && showcase.mode === 'success' ? 'showcase-success' : 'default'} demoSuccess={showcaseOn && showcase.mode === 'success'} successExtra={iteration === '1' ? <SuccessNote /> : undefined} formCardRef={iteration === '1' ? createOrderCardRef : undefined} onStepChange={handleCreateOrderStepChange} onNavigateToOrders={() => handleNavigateToOrders('pending')} />
             ) : currentPage === 'orders' ? (
               <Orders initialTab={ordersInitialTab} onTabChange={() => setOrdersInitialTab(null)} />
             ) : currentPage === 'static-qr' ? (
