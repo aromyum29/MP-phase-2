@@ -576,7 +576,7 @@ export function MerchantCreditV1() {
                         ],
                         [
                           "What you'll need",
-                          "Bank statements for the last 6 months. Your registration certificate and director NIC are already on file from your Koko verification.",
+                          "Financial statements for the last 6 months. Your registration certificate and director NIC are already on file from your Koko verification.",
                         ],
                         [
                           "Repayment",
@@ -1106,8 +1106,7 @@ function LoanDetail({ request, onRestart }: { request: AnyLoan; onRestart?: () =
           items={[
             ["Average monthly revenue", lkr(form.revenue)],
             ["Existing loans", borrowingText(form)],
-            ["Bank statements", form.statements || "Not attached"],
-            ["Financial statements", form.accounts || "Not added"],
+            ["Financial statements", form.statements || "Not attached"],
           ]}
         />
       </DetailGroup>
@@ -1245,7 +1244,7 @@ function Application({
         if (!Number(form.outstanding)) next["mc-outstanding"] = "Enter the total still owed.";
       }
       if (!files.statements)
-        next["mc-statements"] = "Attach your bank statements for the last 6 months.";
+        next["mc-statements"] = "Attach your financial statements for the last 6 months.";
     }
     if (index === 3) {
       if (!crib) next["mc-crib"] = "Give permission for the CRIB check to send your request.";
@@ -1329,7 +1328,10 @@ function Application({
   const titles = [
     ["What do you need?", "These are preferences. The bank confirms the final amount and terms."],
     ["Business details", "Most of this comes from your Koko verification. Add the rest."],
-    ["Finances and documents", "Your income, any existing borrowing and your bank statements."],
+    [
+      "Finances and documents",
+      "Your income, any existing borrowing and your financial statements.",
+    ],
     ["Review and submit", `Check your request before it goes to ${bank}.`],
   ][step];
 
@@ -1620,27 +1622,14 @@ function Application({
               <FileDrop
                 id="mc-statements"
                 required
-                label="Bank statements for the last 6 months"
-                hint="One PDF with all 6 months, from the account your business uses most."
+                label="Latest financial statements for the last 6 months"
+                hint="Audited or management accounts covering the last 6 months."
                 file={files.statements ?? null}
                 error={fileErrors.statements ?? shown("mc-statements")}
                 onFile={(file) => setFile("statements", file)}
                 onRemove={() => setFile("statements", null)}
                 onReject={(message) =>
                   setFileErrors((previous) => ({ ...previous, statements: message }))
-                }
-                maxBytes={10_000_000}
-              />
-              <FileDrop
-                id="mc-accounts"
-                label="Latest financial statements (optional)"
-                hint="Audited accounts or management accounts. They can help the bank decide faster."
-                file={files.accounts ?? null}
-                error={fileErrors.accounts}
-                onFile={(file) => setFile("accounts", file)}
-                onRemove={() => setFile("accounts", null)}
-                onReject={(message) =>
-                  setFileErrors((previous) => ({ ...previous, accounts: message }))
                 }
                 maxBytes={10_000_000}
               />
@@ -1678,8 +1667,7 @@ function Application({
                 items: [
                   ["Average monthly revenue", lkr(form.revenue)],
                   ["Existing loans", borrowingText(form)],
-                  ["Bank statements", form.statements ?? ""],
-                  ["Financial statements", form.accounts || "Not added"],
+                  ["Financial statements", form.statements ?? ""],
                 ],
               },
             ].map((group) => (
