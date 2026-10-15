@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
-import { ArrowRight, ChevronLeft, ChevronRight, Gift, X } from "lucide-react";
+import { ArrowRight, Gift, X } from "lucide-react";
 import { cn } from "../ui/utils";
 import { Btn, Drawer } from "./ui";
 import { INTRO_RESET_EVENT, introState } from "./scenarios";
@@ -7,7 +7,8 @@ import { VIEW_KEYS, useSetSearch } from "./url";
 
 // Ways to announce new features, shown side by side for the product team
 // (Version switcher › New update ideas). Nothing here renders unless an idea
-// is switched on, so the Main UI is unchanged by default.
+// is switched on (and turned off again from the same menu), so the Main UI is
+// unchanged by default.
 export type ShowcaseMode = "badges" | "intro" | "whats-new" | "success" | "strip";
 export const SHOWCASES: Array<{ id: ShowcaseMode; label: string; description: string }> = [
   {
@@ -268,54 +269,6 @@ export function UpdateStrip() {
         className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
       >
         <X className="h-4 w-4" aria-hidden="true" />
-      </button>
-    </div>
-  );
-}
-
-/* ---------- Presenter bar ---------- */
-
-export function ShowcaseBar() {
-  const { mode, start, exit } = useShowcase();
-  if (!mode) return null;
-  const index = SHOWCASES.findIndex((item) => item.id === mode);
-  const current = SHOWCASES[index];
-  const step = (by: number) =>
-    start(SHOWCASES[(index + by + SHOWCASES.length) % SHOWCASES.length].id);
-  return (
-    <div
-      role="region"
-      aria-label="Update idea showcase"
-      className="fixed bottom-4 left-1/2 z-[60] flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-1 rounded-full bg-gray-900 py-1.5 pl-1.5 pr-2 text-sm text-white shadow-lg"
-    >
-      <button
-        type="button"
-        aria-label="Previous idea"
-        onClick={() => step(-1)}
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-      >
-        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-      </button>
-      <p className="min-w-0 truncate px-1" aria-live="polite">
-        <span className="text-white/70">
-          Idea {index + 1} of {SHOWCASES.length} ·{" "}
-        </span>
-        {current.label}
-      </p>
-      <button
-        type="button"
-        aria-label="Next idea"
-        onClick={() => step(1)}
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-      >
-        <ChevronRight className="h-4 w-4" aria-hidden="true" />
-      </button>
-      <button
-        type="button"
-        onClick={exit}
-        className="ml-1 shrink-0 rounded-full bg-white px-3 py-1.5 text-sm font-medium text-gray-900 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-      >
-        Exit
       </button>
     </div>
   );

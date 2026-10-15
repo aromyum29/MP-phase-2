@@ -1,4 +1,4 @@
-import { ChevronUp, Layers, Component, FlaskConical, PlayCircle } from "lucide-react"
+import { ChevronUp, Layers, Component, FlaskConical, PlayCircle, XCircle } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,6 +60,7 @@ export function VersionSwitcher({ collapsed = false, onOpenComponents, onNavigat
           value={iteration}
           onValueChange={(value) => {
             if (value === "1" || value === "2") setIteration(value)
+            if (value === "1") showcase.exit()
           }}
         >
           <DropdownMenuRadioItem value="1" className="min-h-11 cursor-pointer rounded-lg">
@@ -91,6 +92,11 @@ export function VersionSwitcher({ collapsed = false, onOpenComponents, onNavigat
               </span>
             </DropdownMenuItem>
           ))}
+          {showcase.mode && (
+            <DropdownMenuItem onSelect={() => showcase.exit()} className="min-h-11 cursor-pointer gap-2 rounded-lg">
+              <XCircle className="h-4 w-4" />Turn off update idea
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuLabel className="text-xs text-muted-foreground">New update ideas</DropdownMenuLabel>
           {SHOWCASES.map((item, index) => (
