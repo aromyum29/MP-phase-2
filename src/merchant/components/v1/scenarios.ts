@@ -25,7 +25,7 @@ export const SCENARIOS: Scenario[] = [
   {
     id: "credit-rejected",
     label: "Merchant loans: request rejected",
-    description: "Sampath Bank rejected a request",
+    description: "Sampath Bank rejected a request (shown in Requests)",
   },
   {
     id: "credit-not-eligible",
@@ -114,6 +114,12 @@ export function useRunScenario() {
         ),
       };
     });
-    setSearch({ ...clear, page: "merchant-loans", tab: "requests", request: request.id });
+    // Only accepted requests have a side panel; a rejected one shows in the list.
+    setSearch({
+      ...clear,
+      page: "merchant-loans",
+      tab: "requests",
+      request: request.status === "Accepted" ? request.id : null,
+    });
   };
 }

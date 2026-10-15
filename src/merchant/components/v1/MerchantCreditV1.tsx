@@ -6,6 +6,7 @@ import {
   ExternalLink,
   X,
   Lightbulb,
+  Loader2,
   FileText,
   Lock,
   ShieldCheck,
@@ -49,10 +50,10 @@ import {
   SelectInput,
   SkeletonBlock,
   StatusBadge,
-  DoneCard,
   FlowLayout,
   FlowPrimary,
   FlowSecondary,
+  SURFACE,
   SURFACE_LIGHT,
   TextInput,
   Timeline,
@@ -178,9 +179,7 @@ export function MerchantCreditV1() {
   const setStep = (index: number) => setStepParam(String(index + 1));
   const [openId, setOpenId] = useOptionalParam("request");
   const setSearch = useSetSearch();
-  const [receipt, setReceipt] = useState<string | null>(null);
   const [discarding, setDiscarding] = useState<string | null>(null);
-  const [confirmCancel, setConfirmCancel] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState<string | null>(null);
   // Intro shown on every page load. Got it folds it into the header link
   // (until the next reload), and the link opens it again.
@@ -217,7 +216,6 @@ export function MerchantCreditV1() {
   };
   const [introStep, setIntroStep] = useState(0);
   const introExpanded = !introSeen && introOpen;
-  const cancelAction = useAction();
   useEffect(() => {
     if (!freshLoad) return;
     freshLoad = false;
@@ -236,7 +234,8 @@ export function MerchantCreditV1() {
   const drafts = Object.entries(data.loanDrafts).filter(
     ([id]) => lenders.some((lender) => lender.id === id) && !activeFor(id),
   );
-  const detail = requests.find((request) => request.id === openId);
+  // Only accepted requests have a side panel (offer and next steps with the bank).
+  const detail = requests.find((request) => request.id === openId && request.status === "Accepted");
   // A request that's already open can't be edited, e.g. after Back from the confirmation.
   useEffect(() => {
     if (applying && (activeFor(applying) || !canManage)) {
@@ -256,31 +255,9 @@ export function MerchantCreditV1() {
     notify("Draft discarded");
   };
   const startApplication = (bankId: string, startStep = 0) => {
-    setReceipt(null);
     setStep(startStep);
     setApplying(bankId);
   };
-  const cancelRequest = async (id: string) => {
-    const ok = await cancelAction.run(() =>
-      setData((previous) => {
-        const request = previous.loans.find((item) => item.id === id);
-        if (!request || request.status !== "Pending") return previous;
-        return {
-          ...previous,
-          loans: previous.loans.filter((item) => item.id !== id),
-          cancelledLoans: [
-            { ...request, status: "Cancelled", cancelledAt: new Date().toISOString() },
-            ...(previous.cancelledLoans ?? []),
-          ],
-        };
-      }),
-    );
-    if (ok) {
-      setConfirmCancel(false);
-      notify("Request cancelled", `${bankName(detail?.bankId ?? "sampath")} won't review it.`);
-    }
-  };
-
   if (loading) {
     return (
       <V1Page>
@@ -310,49 +287,13 @@ export function MerchantCreditV1() {
           setTab(saved ? "requests" : "banks");
           if (saved) notify("Draft saved", "Continue any time from Merchant loans.");
         }}
-        onSubmitted={(id) => {
-          setApplying(null, { replace: true });
-          setStepParam("1", { replace: true });
-          setReceipt(id);
-        }}
+        onSubmitted={() =>
+          setSearch(
+            { apply: null, step: null, request: null, status: null, tab: "requests" },
+            { replace: true },
+          )
+        }
       />
-    );
-  }
-
-  if (receipt) {
-    const submitted = data.loans.find((request) => request.id === receipt);
-    return (
-      <V1Page>
-        <DoneCard
-          title={`Request sent to ${bankName(submitted?.bankId ?? "sampath")}`}
-          reference={receipt}
-          timeline={submitted ? timelineFor(submitted) : undefined}
-          actions={
-            <>
-              <FlowPrimary
-                onClick={() => {
-                  setReceipt(null);
-                  setTab("requests");
-                  setOpenId(receipt);
-                }}
-              >
-                View request
-              </FlowPrimary>
-              <FlowSecondary
-                onClick={() => {
-                  setReceipt(null);
-                  setTab("requests");
-                }}
-              >
-                Go to requests
-              </FlowSecondary>
-            </>
-          }
-        >
-          The bank usually responds in {eligibility.terms.decision}. We'll email{" "}
-          {CURRENT_USER.email} when it does. Sending a request doesn't guarantee a loan.
-        </DoneCard>
-      </V1Page>
     );
   }
 
@@ -402,7 +343,7 @@ export function MerchantCreditV1() {
               aria-hidden="true"
               className={cn(
                 "text-gray-700 motion-safe:transition-transform motion-safe:duration-300",
-                introExpanded && "rotate-180",
+                tab === "banks" && introExpanded && "rotate-180",
               )}
             />
           </Btn>
@@ -547,7 +488,13 @@ export function MerchantCreditV1() {
 
                   <div className="mt-7 flex flex-wrap items-center gap-x-4 gap-y-3">
                     {active ? (
-                      <Btn size="lg" variant="secondary" onClick={() => setOpenId(active.id)}>
+                      <Btn
+                        size="lg"
+                        variant="secondary"
+                        onClick={() =>
+                          active.status === "Accepted" ? setOpenId(active.id) : setTab("requests")
+                        }
+                      >
                         View request
                       </Btn>
                     ) : !canManage ? (
@@ -660,7 +607,6 @@ export function MerchantCreditV1() {
               { value: "Pending", label: "In review", count: counts.Pending },
               { value: "Accepted", label: "Accepted", count: counts.Accepted },
               { value: "Rejected", label: "Rejected", count: counts.Rejected },
-              { value: "Cancelled", label: "Cancelled", count: counts.Cancelled },
             ]}
           />
           {showDrafts && drafts.length > 0 && (
@@ -753,16 +699,19 @@ export function MerchantCreditV1() {
                         <td className="whitespace-nowrap px-5 py-3.5">{fmtDate(request.date)}</td>
                         <td className="px-5 py-3.5">
                           <LoanBadge status={request.status} />
+                          <RejectReason request={request} />
                         </td>
                         <td className="px-5 py-3.5 text-right">
-                          <Btn
-                            variant="tertiary"
-                            size="sm"
-                            aria-label={`View, ${request.id}`}
-                            onClick={() => setOpenId(request.id)}
-                          >
-                            View
-                          </Btn>
+                          {request.status === "Accepted" && (
+                            <Btn
+                              variant="tertiary"
+                              size="sm"
+                              aria-label={`View, ${request.id}`}
+                              onClick={() => setOpenId(request.id)}
+                            >
+                              View
+                            </Btn>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -772,35 +721,22 @@ export function MerchantCreditV1() {
               <ul className="space-y-3 lg:hidden">
                 {visible.map((request) => (
                   <li key={request.id}>
-                    <button
-                      type="button"
-                      onClick={() => setOpenId(request.id)}
-                      className={cn(
-                        SURFACE_LIGHT,
-                        "w-full space-y-3 p-4 text-left transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900",
-                      )}
-                    >
-                      <span className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="flex items-center gap-3">
-                          <BankLogo bank={bankName(request.bankId)} />
-                          <span>
-                            <span className="block text-sm font-semibold">
-                              {bankName(request.bankId)}
-                            </span>
-                            <span className="block text-xs text-muted-foreground">
-                              {request.id}
-                            </span>
-                          </span>
-                        </span>
-                        <LoanBadge status={request.status} />
-                      </span>
-                      <span className="flex flex-wrap justify-between gap-2 text-sm">
-                        <span className="font-medium tabular-nums">{lkr(request.form.amount)}</span>
-                        <span className="text-muted-foreground">
-                          Submitted {fmtDate(request.date)}
-                        </span>
-                      </span>
-                    </button>
+                    {request.status === "Accepted" ? (
+                      <button
+                        type="button"
+                        onClick={() => setOpenId(request.id)}
+                        className={cn(
+                          SURFACE_LIGHT,
+                          "w-full space-y-3 p-4 text-left transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900",
+                        )}
+                      >
+                        <RequestCardBody request={request} />
+                      </button>
+                    ) : (
+                      <div className={cn(SURFACE_LIGHT, "space-y-3 p-4")}>
+                        <RequestCardBody request={request} />
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -835,13 +771,7 @@ export function MerchantCreditV1() {
 
       <Drawer
         open={Boolean(detail)}
-        onOpenChange={(open) => {
-          if (!open) {
-            setOpenId(null);
-            setConfirmCancel(false);
-            cancelAction.clearError();
-          }
-        }}
+        onOpenChange={(open) => !open && setOpenId(null)}
         title="Merchant loan request"
         description={detail ? `${bankName(detail.bankId)} · ${detail.id}` : undefined}
         footer={
@@ -866,58 +796,125 @@ export function MerchantCreditV1() {
                 needs.
               </p>
             </div>
-          ) : detail?.status === "Pending" && canManage ? (
-            confirmCancel ? (
-              <div className="space-y-3">
-                <p className="text-sm font-medium">
-                  Cancel this request? {bankName(detail.bankId)} will stop reviewing it.
-                </p>
-                {cancelAction.error && (
-                  <InlineAlert tone="error" title="The request wasn't cancelled">
-                    {cancelAction.error}
-                  </InlineAlert>
-                )}
-                <div className="flex flex-wrap gap-2">
-                  <Btn
-                    variant="danger"
-                    className="border border-[#b4232f]"
-                    loading={cancelAction.pending}
-                    onClick={() => cancelRequest(detail.id)}
-                  >
-                    Cancel request
-                  </Btn>
-                  <Btn
-                    variant="tertiary"
-                    disabled={cancelAction.pending}
-                    onClick={() => setConfirmCancel(false)}
-                  >
-                    Keep request
-                  </Btn>
-                </div>
-              </div>
-            ) : (
-              <Btn variant="danger" className="-ml-3" onClick={() => setConfirmCancel(true)}>
-                Cancel request
-              </Btn>
-            )
           ) : undefined
         }
       >
-        {detail && (
-          <LoanDetail
-            request={detail}
-            onRestart={
-              canManage && eligibility.eligible && !activeFor(detail.bankId)
-                ? () => {
-                    setOpenId(null);
-                    startApplication(detail.bankId);
-                  }
-                : undefined
-            }
-          />
-        )}
+        {detail && <LoanDetail request={detail} />}
       </Drawer>
     </V1Page>
+  );
+}
+
+const SUBMIT_MS = 5000;
+// Shown while a loan request is sent, then the page moves to Requests.
+function SubmittingScreen({ bank }: { bank: string }) {
+  const [started, setStarted] = useState(false);
+  const [phase, setPhase] = useState(0);
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    heading.current?.focus();
+    const frame = requestAnimationFrame(() => requestAnimationFrame(() => setStarted(true)));
+    const timers = [1500, 3000, 4500].map((ms, index) => setTimeout(() => setPhase(index + 1), ms));
+    return () => {
+      cancelAnimationFrame(frame);
+      timers.forEach(clearTimeout);
+    };
+  }, []);
+  const steps = ["Checking your details", "Attaching your documents", `Sending to ${bank}`];
+  const circumference = 2 * Math.PI * 36;
+  return (
+    <div
+      className={cn(
+        SURFACE,
+        "mx-auto mt-4 flex w-full max-w-[560px] flex-col items-center px-6 py-12 text-center sm:px-10",
+      )}
+    >
+      <div className="relative h-24 w-24">
+        <svg viewBox="0 0 80 80" className="h-24 w-24 -rotate-90" aria-hidden="true">
+          <circle cx="40" cy="40" r="36" fill="none" stroke="#ececf0" strokeWidth="4" />
+          <circle
+            cx="40"
+            cy="40"
+            r="36"
+            fill="none"
+            stroke="#111827"
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={started ? 0 : circumference}
+            style={{ transition: `stroke-dashoffset ${SUBMIT_MS}ms linear` }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <BankLogo bank={bank} />
+        </div>
+      </div>
+      <h1
+        ref={heading}
+        tabIndex={-1}
+        className="mt-6 text-2xl tracking-tight text-gray-900 outline-none"
+      >
+        Submitting your merchant loan form
+      </h1>
+      <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+        This takes a few seconds. We'll take you to your requests automatically.
+      </p>
+      <ul className="mt-8 w-full max-w-[280px] space-y-3 text-left" aria-hidden="true">
+        {steps.map((label, index) => (
+          <li
+            key={label}
+            className={cn(
+              "flex items-center gap-3 text-sm transition-colors",
+              index <= phase ? "text-gray-900" : "text-gray-500",
+            )}
+          >
+            {index < phase ? (
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-700" />
+            ) : index === phase ? (
+              <Loader2 className="h-5 w-5 shrink-0 text-gray-900 motion-safe:animate-spin" />
+            ) : (
+              <span className="mx-0.5 h-4 w-4 shrink-0 rounded-full border-2 border-gray-300" />
+            )}
+            {label}
+          </li>
+        ))}
+      </ul>
+      <p className="sr-only" role="status">
+        Submitting your merchant loan form to {bank}. You'll be taken to your requests
+        automatically.
+      </p>
+    </div>
+  );
+}
+
+function RejectReason({ request }: { request: AnyLoan }) {
+  if (request.status !== "Rejected" || !request.reason) return null;
+  return (
+    <span className="mt-1.5 block max-w-[260px] text-xs text-muted-foreground">
+      {request.reason}
+    </span>
+  );
+}
+
+function RequestCardBody({ request }: { request: AnyLoan }) {
+  return (
+    <>
+      <span className="flex flex-wrap items-center justify-between gap-2">
+        <span className="flex items-center gap-3">
+          <BankLogo bank={bankName(request.bankId)} />
+          <span>
+            <span className="block text-sm font-semibold">{bankName(request.bankId)}</span>
+            <span className="block text-xs text-muted-foreground">{request.id}</span>
+          </span>
+        </span>
+        <LoanBadge status={request.status} />
+      </span>
+      <span className="flex flex-wrap justify-between gap-2 text-sm">
+        <span className="font-medium tabular-nums">{lkr(request.form.amount)}</span>
+        <span className="text-muted-foreground">Submitted {fmtDate(request.date)}</span>
+      </span>
+      <RejectReason request={request} />
+    </>
   );
 }
 
@@ -1148,7 +1145,7 @@ function Application({
   setStep: (step: number) => void;
   eligibility: ReturnType<typeof useEligibility>;
   onExit: (saved: boolean) => void;
-  onSubmitted: (id: string) => void;
+  onSubmitted: () => void;
 }) {
   const { data, setData } = useFinanceData();
   const terms = LENDER_TERMS[bankId];
@@ -1284,39 +1281,50 @@ function Application({
       return;
     const id = reference("MC");
     const now = new Date().toISOString();
-    const ok = await submitAction.run(() =>
-      setData((previous) => {
-        if (
-          previous.loans.some(
-            (request) => request.bankId === bankId && request.status !== "Rejected",
+    // The submitting screen shows for 5 seconds, then the request is saved.
+    const ok = await submitAction.run(
+      () =>
+        setData((previous) => {
+          if (
+            previous.loans.some(
+              (request) => request.bankId === bankId && request.status !== "Rejected",
+            )
           )
-        )
-          return previous;
-        const draftsLeft = { ...previous.loanDrafts };
-        delete draftsLeft[bankId];
-        return {
-          ...previous,
-          loanDrafts: draftsLeft,
-          loans: [
-            {
-              id,
-              bankId,
-              status: "Pending",
-              date: now,
-              form: { ...form },
-              requestedBy: CURRENT_USER.username,
-              consent: { crib: true, authorised: true, at: now, by: CURRENT_USER.username },
-            },
-            ...previous.loans,
-          ],
-        };
-      }),
+            return previous;
+          const draftsLeft = { ...previous.loanDrafts };
+          delete draftsLeft[bankId];
+          return {
+            ...previous,
+            loanDrafts: draftsLeft,
+            loans: [
+              {
+                id,
+                bankId,
+                status: "Pending",
+                date: now,
+                form: { ...form },
+                requestedBy: CURRENT_USER.username,
+                consent: { crib: true, authorised: true, at: now, by: CURRENT_USER.username },
+              },
+              ...previous.loans,
+            ],
+          };
+        }),
+      SUBMIT_MS,
     );
     if (ok) {
       notify("Request sent", `${bank} usually responds in ${terms.decision}.`);
-      onSubmitted(id);
+      onSubmitted();
     }
   };
+
+  if (submitAction.pending && step === 3) {
+    return (
+      <V1Page>
+        <SubmittingScreen bank={bank} />
+      </V1Page>
+    );
+  }
 
   const titles = [
     ["What do you need?", "These are preferences. The bank confirms the final amount and terms."],
