@@ -29,6 +29,7 @@ import {
   FileDrop,
   InlineAlert,
   PageHeader,
+  RequiredNote,
   SkeletonBlock,
   SURFACE,
   DoneCard,
@@ -172,6 +173,8 @@ export function BankAccountV1() {
     reason,
   ]);
   const shown = (key: string) => (attempt > 0 || touched[key] ? errors[key] : undefined);
+  // Continue stays off until every required field is filled in correctly.
+  const detailsComplete = Object.keys(errors).length === 0;
   const touch = (key: string) => setTouched((previous) => ({ ...previous, [key]: true }));
   const update = (key: keyof Account, value: string) =>
     setBankDraft((previous) => ({
@@ -463,7 +466,7 @@ export function BankAccountV1() {
           headingRef={heading}
           actions={
             <>
-              <FlowPrimary onClick={toReview}>
+              <FlowPrimary disabled={!detailsComplete} onClick={toReview}>
                 Continue to review
                 <ArrowRight aria-hidden="true" />
               </FlowPrimary>
@@ -482,6 +485,7 @@ export function BankAccountV1() {
             <ErrorSummary errors={attempt > 0 ? errors : {}} focusKey={attempt} />
           </div>
           <div className="flex flex-col gap-7">
+            <RequiredNote />
             <TextInput
               id="ba-holder"
               label="Account holder name"
@@ -492,6 +496,7 @@ export function BankAccountV1() {
             <div className="grid gap-7 sm:grid-cols-2 sm:gap-5">
               <Combobox
                 id="ba-bank"
+                required
                 label="Bank"
                 value={bankDraft.bank}
                 onChange={(value) => {
@@ -506,6 +511,7 @@ export function BankAccountV1() {
               />
               <Combobox
                 id="ba-branch"
+                required
                 label="Branch"
                 value={bankDraft.branch}
                 disabled={!bankEntry}
@@ -528,6 +534,7 @@ export function BankAccountV1() {
             <div className="grid gap-7 sm:grid-cols-2 sm:gap-5">
               <TextInput
                 id="ba-number"
+                required
                 label="Account number"
                 inputMode="numeric"
                 autoComplete="off"
@@ -548,6 +555,7 @@ export function BankAccountV1() {
               />
               <TextInput
                 id="ba-confirm"
+                required
                 label="Re-enter account number"
                 inputMode="numeric"
                 autoComplete="off"
@@ -562,6 +570,7 @@ export function BankAccountV1() {
             </div>
             <FileDrop
               id="ba-statement"
+              required
               label="Bank statement"
               hint={`A statement from the last 3 months that shows ${BUSINESS.name}, the bank and this account number.`}
               file={statement}
@@ -576,6 +585,7 @@ export function BankAccountV1() {
             />
             <TextArea
               id="ba-reason"
+              required
               label="Reason for change"
               placeholder="For example, we've moved our business banking to a new bank."
               value={reason}
@@ -696,6 +706,7 @@ export function BankAccountV1() {
             </InlineAlert>
             <Checkbox
               id="ba-attest"
+              required
               checked={attest}
               onChange={setAttest}
               error={

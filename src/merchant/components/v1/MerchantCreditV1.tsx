@@ -45,6 +45,7 @@ import {
   InlineAlert,
   PageHeader,
   RadioCards,
+  RequiredNote,
   SelectInput,
   SkeletonBlock,
   StatusBadge,
@@ -1214,13 +1215,10 @@ function Application({
     mounted.current = true;
   }, [step]);
 
-  const amount = Number(form.amount || 0);
   const errorsFor = (index: number) => {
     const next: Record<string, string> = {};
     if (index === 0) {
       if (!form.amount) next["mc-amount"] = "Enter how much you'd like to request.";
-      else if (amount < terms.min || amount > terms.max)
-        next["mc-amount"] = `Enter an amount between ${lkr(terms.min)} and ${lkr(terms.max)}.`;
       if (!form.purpose) next["mc-purpose"] = "Choose what the loan is for.";
       else if (form.purpose === "Other" && !form.purposeOther?.trim())
         next["mc-purpose-other"] = "Tell the bank what the loan is for.";
@@ -1270,6 +1268,8 @@ function Application({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
   const errors = errorsFor(step);
+  // Continue stays off until every required field on this step is complete.
+  const stepComplete = Object.keys(errors).length === 0;
   const shown = (key: string) => (attempts[step] || touched[key] ? errors[key] : undefined);
   const touch = (key: string) => setTouched((previous) => ({ ...previous, [key]: true }));
   const next = async () => {
@@ -1341,7 +1341,7 @@ function Application({
         headingRef={heading}
         actions={
           <>
-            <FlowPrimary loading={submitAction.pending} onClick={next}>
+            <FlowPrimary loading={submitAction.pending} disabled={!stepComplete} onClick={next}>
               {step < 3 ? (
                 <>
                   Continue
@@ -1367,48 +1367,26 @@ function Application({
         <div className="mb-7 empty:hidden">
           <ErrorSummary errors={attempts[step] ? errors : {}} focusKey={attempts[step] ?? 0} />
         </div>
+        {step < 3 && (
+          <div className="mb-7">
+            <RequiredNote />
+          </div>
+        )}
 
         {step === 0 && (
           <div className="flex flex-col gap-7">
-            <div className="space-y-3">
-              <CurrencyInput
-                id="mc-amount"
-                label="Amount"
-                value={form.amount}
-                onChange={(value) => update("amount", value)}
-                onBlur={() => touch("mc-amount")}
-                error={shown("mc-amount")}
-                hint={`Between ${lkr(terms.min)} and ${lkr(terms.max)}.${eligibility.eligible ? ` Your estimate is up to ${lkr(eligibility.estimate)}.` : ""}`}
-              />
-              <div>
-                <input
-                  type="range"
-                  min={terms.min}
-                  max={terms.max}
-                  step={50000}
-                  value={Math.min(Math.max(amount || terms.min, terms.min), terms.max)}
-                  onChange={(event) => update("amount", event.target.value)}
-                  aria-label="Adjust amount"
-                  aria-valuetext={lkr(amount || terms.min)}
-                  className="h-11 w-full cursor-pointer accent-gray-900"
-                />
-                <div
-                  className="flex justify-between text-xs text-muted-foreground"
-                  aria-hidden="true"
-                >
-                  <span>{lkr(terms.min)}</span>
-                  <span>{lkr(terms.max)}</span>
-                </div>
-              </div>
-              {eligibility.eligible && amount > eligibility.estimate && amount <= terms.max && (
-                <InlineAlert tone="warning" title="This is more than your estimate">
-                  Based on your Koko sales, {bank} may offer less than {lkr(amount)}. You can still
-                  send the request.
-                </InlineAlert>
-              )}
-            </div>
+            <CurrencyInput
+              id="mc-amount"
+              required
+              label="Amount"
+              value={form.amount}
+              onChange={(value) => update("amount", value)}
+              onBlur={() => touch("mc-amount")}
+              error={shown("mc-amount")}
+            />
             <SelectInput
               id="mc-purpose"
+              required
               label="What's it for?"
               placeholder="Choose a purpose"
               value={form.purpose}
@@ -1422,6 +1400,7 @@ function Application({
             {form.purpose === "Other" && (
               <TextInput
                 id="mc-purpose-other"
+                required
                 label="Tell the bank what it's for"
                 value={form.purposeOther ?? ""}
                 maxLength={120}
@@ -1437,6 +1416,7 @@ function Application({
             )}
             <SelectInput
               id="mc-term"
+              required
               label="Repayment period"
               placeholder="Choose a period"
               hint="The bank confirms the final term."
@@ -1453,6 +1433,7 @@ function Application({
             />
             <SelectInput
               id="mc-security"
+              required
               label="Security you can offer"
               placeholder="Choose security"
               hint="Security can help with larger amounts. Choose No security for an unsecured request."
@@ -1489,6 +1470,7 @@ function Application({
             </section>
             <SelectInput
               id="mc-employees"
+              required
               label="Number of employees"
               placeholder="Choose a range"
               value={form.employees ?? ""}
@@ -1503,6 +1485,7 @@ function Application({
             <div className="grid gap-7 sm:grid-cols-2 sm:gap-5">
               <TextInput
                 id="mc-contact"
+                required
                 label="Contact person"
                 autoComplete="name"
                 value={form.contact}
@@ -1512,6 +1495,7 @@ function Application({
               />
               <TextInput
                 id="mc-designation"
+                required
                 label="Their role"
                 autoComplete="organization-title"
                 value={form.designation ?? ""}
@@ -1523,6 +1507,7 @@ function Application({
             <div className="grid gap-7 sm:grid-cols-2 sm:gap-5">
               <TextInput
                 id="mc-phone"
+                required
                 label="Mobile number"
                 type="tel"
                 inputMode="tel"
@@ -1534,6 +1519,7 @@ function Application({
               />
               <TextInput
                 id="mc-email"
+                required
                 label="Email"
                 type="email"
                 autoComplete="email"
@@ -1550,6 +1536,7 @@ function Application({
           <div className="flex flex-col gap-7">
             <CurrencyInput
               id="mc-revenue"
+              required
               label="Average monthly revenue"
               value={form.revenue}
               onChange={(value) => update("revenue", value)}
@@ -1559,6 +1546,7 @@ function Application({
             />
             <RadioCards
               name="mc-borrowing"
+              required
               legend="Does the business have any existing loans?"
               value={form.borrowing}
               onChange={(value) => {
@@ -1575,6 +1563,7 @@ function Application({
               <>
                 <TextInput
                   id="mc-lender"
+                  required
                   label="Bank or lender"
                   value={form.lender ?? ""}
                   onChange={(event) => update("lender", event.target.value)}
@@ -1585,6 +1574,7 @@ function Application({
                 <div className="grid gap-7 sm:grid-cols-2 sm:gap-5">
                   <CurrencyInput
                     id="mc-repayments"
+                    required
                     label="Total monthly repayments"
                     value={form.repayments}
                     onChange={(value) => update("repayments", value)}
@@ -1593,6 +1583,7 @@ function Application({
                   />
                   <CurrencyInput
                     id="mc-outstanding"
+                    required
                     label="Total still owed"
                     value={form.outstanding ?? ""}
                     onChange={(value) => update("outstanding", value)}
@@ -1620,6 +1611,7 @@ function Application({
               </ul>
               <FileDrop
                 id="mc-statements"
+                required
                 label="Bank statements for the last 6 months"
                 hint="One PDF with all 6 months, from the account your business uses most."
                 file={files.statements ?? null}
@@ -1705,6 +1697,7 @@ function Application({
               </h3>
               <Checkbox
                 id="mc-crib"
+                required
                 checked={crib}
                 onChange={setCrib}
                 error={attempts[3] ? errors["mc-crib"] : undefined}
@@ -1713,6 +1706,7 @@ function Application({
               </Checkbox>
               <Checkbox
                 id="mc-authorised"
+                required
                 checked={authorised}
                 onChange={setAuthorised}
                 error={attempts[3] ? errors["mc-authorised"] : undefined}

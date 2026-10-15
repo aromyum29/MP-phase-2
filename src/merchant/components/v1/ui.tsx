@@ -820,6 +820,22 @@ export function FieldAttention({ id, note }: { id: string; note?: string }) {
   );
 }
 
+// Red star on mandatory fields (Main UI). Screen readers get aria-required instead.
+export function RequiredMark() {
+  return (
+    <span className="ml-0.5 text-[#b4232f]" aria-hidden="true">
+      *
+    </span>
+  );
+}
+export function RequiredNote() {
+  return (
+    <p className="text-xs text-muted-foreground">
+      Fields marked <span className="text-[#b4232f]">*</span> are required.
+    </p>
+  );
+}
+
 export function FieldShell({
   id,
   label,
@@ -827,6 +843,7 @@ export function FieldShell({
   error,
   attention,
   optional,
+  required,
   aside,
   children,
 }: {
@@ -836,6 +853,7 @@ export function FieldShell({
   error?: string;
   attention?: string;
   optional?: boolean;
+  required?: boolean;
   aside?: ReactNode;
   children: ReactNode;
 }) {
@@ -846,6 +864,7 @@ export function FieldShell({
         <div className="flex items-baseline justify-between gap-3">
           <label htmlFor={id} className="text-sm font-medium text-gray-800">
             {label}
+            {required && <RequiredMark />}
             {optional && <span className="font-normal text-gray-500"> (Optional)</span>}
           </label>
           {aside}
@@ -866,6 +885,7 @@ export function FieldShell({
       <div className="flex items-baseline justify-between gap-3">
         <label htmlFor={id} className="text-sm font-medium text-foreground">
           {label}
+          {required && <RequiredMark />}
           {optional && <span className="font-normal text-muted-foreground"> (optional)</span>}
         </label>
         {aside}
@@ -893,7 +913,20 @@ type TextInputProps = Omit<ComponentProps<"input">, "prefix"> & {
   attention?: string;
 };
 export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function TextInput(
-  { id, label, hint, error, attention, optional, aside, prefix, locked, className, ...input },
+  {
+    id,
+    label,
+    hint,
+    error,
+    attention,
+    optional,
+    required,
+    aside,
+    prefix,
+    locked,
+    className,
+    ...input
+  },
   ref,
 ) {
   const soft = useSoft();
@@ -905,6 +938,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
       error={error}
       attention={attention}
       optional={optional}
+      required={required}
       aside={aside}
     >
       <div className="relative">
@@ -923,6 +957,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
           ref={ref}
           id={id}
           readOnly={locked || input.readOnly}
+          aria-required={required || undefined}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy(id, { hint, error, attention })}
           className={cn(
@@ -956,6 +991,7 @@ export function TextArea({
   hint,
   error,
   optional,
+  required,
   aside,
   className,
   ...input
@@ -969,9 +1005,18 @@ export function TextArea({
 }) {
   const soft = useSoft();
   return (
-    <FieldShell id={id} label={label} hint={hint} error={error} optional={optional} aside={aside}>
+    <FieldShell
+      id={id}
+      label={label}
+      hint={hint}
+      error={error}
+      optional={optional}
+      required={required}
+      aside={aside}
+    >
       <textarea
         id={id}
+        aria-required={required || undefined}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy(id, { hint, error })}
         className={cn(
@@ -1024,6 +1069,7 @@ export function SelectInput({
   options,
   placeholder = "Choose an option",
   attention,
+  required,
 }: {
   id: string;
   label: ReactNode;
@@ -1031,6 +1077,7 @@ export function SelectInput({
   error?: string;
   attention?: string;
   optional?: boolean;
+  required?: boolean;
   value: string;
   onChange: (value: string) => void;
   options: Array<{ value: string; label: string }>;
@@ -1045,12 +1092,14 @@ export function SelectInput({
       error={error}
       attention={attention}
       optional={optional}
+      required={required}
     >
       <div className="relative">
         <select
           id={id}
           value={value}
           onChange={(event) => onChange(event.target.value)}
+          aria-required={required || undefined}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy(id, { hint, error, attention })}
           className={cn(
@@ -1084,9 +1133,11 @@ export function RadioCards({
   value,
   onChange,
   columns = 2,
+  required,
 }: {
   name: string;
   legend: ReactNode;
+  required?: boolean;
   hint?: ReactNode;
   error?: string;
   options: Array<{ value: string; label: string; description?: string }>;
@@ -1112,6 +1163,7 @@ export function RadioCards({
         className={cn("text-sm font-medium", soft ? "mb-2 text-gray-800" : "text-foreground")}
       >
         {legend}
+        {required && <RequiredMark />}
       </legend>
       {!soft && hintText}
       <div className={cn("grid gap-2 pt-0.5", grid)}>
@@ -1176,9 +1228,11 @@ export function Combobox({
   searchPlaceholder,
   emptyText,
   disabled,
+  required,
 }: {
   id: string;
   label: ReactNode;
+  required?: boolean;
   hint?: ReactNode;
   error?: string;
   value: string;
@@ -1193,7 +1247,7 @@ export function Combobox({
   const soft = useSoft();
   const selected = options.find((option) => option.value === value);
   return (
-    <FieldShell id={id} label={label} hint={hint} error={error}>
+    <FieldShell id={id} label={label} hint={hint} error={error} required={required}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button
@@ -1202,6 +1256,7 @@ export function Combobox({
             role="combobox"
             aria-expanded={open}
             aria-haspopup="listbox"
+            aria-required={required || undefined}
             aria-invalid={error ? true : undefined}
             aria-describedby={describedBy(id, { hint, error })}
             disabled={disabled}
@@ -1277,9 +1332,11 @@ export function FileDrop({
   onReject,
   maxBytes = 5 * 1024 * 1024,
   attention,
+  required,
 }: {
   id: string;
   label: string;
+  required?: boolean;
   hint?: ReactNode;
   file: File | null;
   error?: string;
@@ -1348,6 +1405,7 @@ export function FileDrop({
         className={soft ? "text-sm font-medium text-gray-800" : "text-sm font-medium"}
       >
         {label}
+        {required && <RequiredMark />}
       </p>
       {!soft && hintText}
       <input
@@ -1357,6 +1415,7 @@ export function FileDrop({
         accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
         className="peer sr-only"
         aria-labelledby={`${id}-label`}
+        aria-required={required || undefined}
         aria-describedby={describedBy(id, { hint, error, attention })}
         aria-invalid={error ? true : undefined}
         onChange={(event) => {
@@ -1548,12 +1607,14 @@ export function Checkbox({
   onChange,
   children,
   error,
+  required,
 }: {
   id: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
   children: ReactNode;
   error?: string;
+  required?: boolean;
 }) {
   const soft = useSoft();
   return (
@@ -1579,11 +1640,15 @@ export function Checkbox({
           type="checkbox"
           checked={checked}
           onChange={(event) => onChange(event.target.checked)}
+          aria-required={required || undefined}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `${id}-error` : undefined}
           className="mt-1 h-4 w-4 shrink-0 accent-gray-900"
         />
-        <span>{children}</span>
+        <span>
+          {children}
+          {required && <RequiredMark />}
+        </span>
       </label>
       <FieldError id={id} error={error} />
     </div>
