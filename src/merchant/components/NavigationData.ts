@@ -119,5 +119,5 @@ export const navigationGroups = [
 export const financeNavigationItems: NavigationItem[] = [
   { id: 'financial-statement', title: 'Financial statement', icon: DocumentTextIcon },
   { id: 'bank-account', title: 'Bank account', icon: BuildingLibraryIcon },
-  { id: 'merchant-loans', title: 'Merchant credit', icon: WalletIcon },
+  { id: 'merchant-loans', title: 'Merchant loans', icon: WalletIcon },
 ]

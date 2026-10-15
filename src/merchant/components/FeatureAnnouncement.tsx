@@ -19,7 +19,7 @@ export const defaultSingleAnnouncement: AnnouncementContent = {
 const highlights: { destination: AnnouncementDestination; image: string; title: string; description: string }[] = [
   { destination: "koko-assets", image: "marketing", title: "Your next campaign starts here", description: "Download Koko logos and artwork from the new Koko assets library." },
   { destination: "bank-account", image: "bank-account", title: "Your bank account, in one place", description: "View your payout account and request a change from Finance." },
-  { destination: "merchant-loans", image: "merchant-credit", title: "Explore Merchant credit", description: "Request business funding and track the bank’s response." },
+  { destination: "merchant-loans", image: "merchant-credit", title: "Explore Merchant loans", description: "Request a business loan and track the bank’s response." },
 ];
 
 // Both templates end in a single action: Create new order. Feature rows are

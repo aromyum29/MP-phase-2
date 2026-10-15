@@ -150,9 +150,9 @@ export function DemoPanel() {
             </p>
           </div>
           <div className="space-y-2">
-            <p className="text-sm font-medium">Merchant credit eligibility</p>
+            <p className="text-sm font-medium">Merchant loans eligibility</p>
             <FilterChips
-              label="Merchant credit eligibility"
+              label="Merchant loans eligibility"
               value={settings.eligibility}
               onChange={(value) => update({ eligibility: value as "eligible" | "not-eligible" })}
               items={[
@@ -174,7 +174,7 @@ export function DemoPanel() {
           {pendingBank.length ? (
             <>
               <label className="block space-y-1 text-sm">
-                <span className="font-medium">Reason if declined</span>
+                <span className="font-medium">Reason if rejected</span>
                 <select
                   className="h-10 w-full rounded-lg border border-[#6B7280] bg-white px-2 text-sm"
                   value={bankReason}
@@ -217,12 +217,12 @@ export function DemoPanel() {
 
         <section className="space-y-3" aria-labelledby="demo-credit">
           <h3 id="demo-credit" className="text-base font-semibold">
-            Merchant credit responses
+            Merchant loans responses
           </h3>
           {data.loans.length ? (
             <>
               <label className="block space-y-1 text-sm">
-                <span className="font-medium">Reason if declined</span>
+                <span className="font-medium">Reason if rejected</span>
                 <select
                   className="h-10 w-full rounded-lg border border-[#6B7280] bg-white px-2 text-sm"
                   value={creditReason}
@@ -249,7 +249,10 @@ export function DemoPanel() {
                           {request.id}
                         </span>
                       </p>
-                      <StatusBadge status={request.status} />
+                      <StatusBadge
+                        status={request.status}
+                        label={request.status === "Rejected" ? "Rejected" : undefined}
+                      />
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Btn
@@ -265,7 +268,7 @@ export function DemoPanel() {
                         disabled={request.status === "Rejected"}
                         onClick={() => decideLoan(request.id, "Rejected")}
                       >
-                        Decline
+                        Reject
                       </Btn>
                       <Btn
                         size="sm"
@@ -281,7 +284,7 @@ export function DemoPanel() {
               })}
             </>
           ) : (
-            <p className="text-sm text-muted-foreground">No merchant credit requests yet.</p>
+            <p className="text-sm text-muted-foreground">No merchant loan requests yet.</p>
           )}
         </section>
 

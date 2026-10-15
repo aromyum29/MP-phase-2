@@ -1,4 +1,5 @@
 import catalogue from "../tools/koko-assets-data.json";
+import { ASSET_FORMATS } from "./asset-formats";
 
 // Iteration 1 asset catalogue: search keywords, a usage note and downloads
 // labelled by use. Variant files live in public/koko-assets/variants and are
@@ -149,9 +150,11 @@ const extra: Record<string, Omit<AssetV1, keyof (typeof catalogue.assets)[number
   },
 };
 
+// Downloads are offered by file format (PNG, JPEG, PDF, WebP); see asset-formats.ts.
 export const ASSETS: AssetV1[] = catalogue.assets.map((asset) => ({
   ...asset,
   ...extra[asset.id],
+  variants: ASSET_FORMATS[asset.id] ?? extra[asset.id].variants,
 }));
 export const KIT = {
   url: "/koko-assets/koko-starter-kit.zip",

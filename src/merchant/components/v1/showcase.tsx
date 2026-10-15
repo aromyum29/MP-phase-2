@@ -40,8 +40,8 @@ const UPDATES = [
   {
     page: "merchant-loans",
     image: "/announcements/merchant-credit.png",
-    title: "Merchant credit",
-    body: "Get funding for your business from a partner bank. Koko helps you apply.",
+    title: "Merchant loans",
+    body: "Get a business loan from a partner bank. Koko helps you apply.",
   },
   {
     page: "koko-assets",
@@ -230,8 +230,8 @@ export function SuccessNote() {
         className="h-10 w-10 shrink-0"
       />
       <div className="min-w-0 flex-1 text-sm">
-        <p className="font-semibold text-gray-900">New: Merchant credit</p>
-        <p className="text-muted-foreground">Funding for your business, through Koko.</p>
+        <p className="font-semibold text-gray-900">New: Merchant loans</p>
+        <p className="text-muted-foreground">Business loans, through Koko.</p>
       </div>
       <Btn variant="tertiary" size="sm" onClick={() => go("merchant-loans")}>
         Take a look
@@ -253,7 +253,7 @@ export function UpdateStrip() {
       className="relative flex min-h-10 shrink-0 items-center justify-center gap-2 bg-gray-900 px-12 py-2 text-center text-sm text-white"
     >
       <span>
-        New: Merchant credit, Koko assets and an easier bank account change.{" "}
+        New: Merchant loans, Koko assets and an easier bank account change.{" "}
         <button
           type="button"
           onClick={openWhatsNew}

@@ -23,8 +23,6 @@ export type LoanForm = {
   security?: string;
   statements?: string;
   accounts?: string;
-  // Request this draft resubmits after the bank asked for changes.
-  resubmitOf?: string;
 };
 export type LoanStatus = "Pending" | "Accepted" | "Rejected";
 // Optional fields below are written by iteration 1 only; iteration 2 ignores them.
@@ -38,9 +36,6 @@ export type LoanRequest = {
   decidedAt?: string;
   reason?: string;
   offer?: { amount: string; term: string; rate: string };
-  // Main UI: what the bank asks to change before it reviews again (step is the form step).
-  // fields: form field ids to highlight until they change.
-  changes?: Array<{ step: number; title: string; note: string; fields?: string[] }>;
   consent?: { crib: boolean; authorised: boolean; at: string; by: string };
 };
 export type BankRequest = {
@@ -54,6 +49,7 @@ export type BankRequest = {
   reason?: string;
   from?: Account;
   verifiedAt?: string;
+  changeReason?: string;
 };
 // Iteration 1 moves cancelled requests here so iteration 2's lists and
 // one-active-request rules never see a status they don't know.

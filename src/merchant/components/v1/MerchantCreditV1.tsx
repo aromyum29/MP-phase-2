@@ -5,7 +5,7 @@ import {
   ChevronDown,
   ExternalLink,
   X,
-  HelpCircle,
+  Lightbulb,
   FileText,
   Lock,
   ShieldCheck,
@@ -25,7 +25,6 @@ import {
 import { useAction, useCanManageFinance, useDemo, useFirstLoad } from "./demo";
 import {
   BUSINESS,
-  COMING_SOON_BANKS,
   CURRENT_USER,
   KOKO_SALES,
   LEGAL,
@@ -34,11 +33,9 @@ import {
   SECURITY_OPTIONS,
 } from "./placeholders";
 import {
-  BackLink,
   Btn,
   Card,
   Checkbox,
-  CopyButton,
   CurrencyInput,
   DefinitionList,
   Drawer,
@@ -68,7 +65,7 @@ import {
   statusLabel,
   type TimelineItem,
 } from "./ui";
-import { INTRO_RESET_EVENT, introState, firstChangeStep, resubmitDraft } from "./scenarios";
+import { INTRO_RESET_EVENT, introState } from "./scenarios";
 import { VIEW_KEYS, useOptionalParam, useSetSearch, useViewParam } from "./url";
 
 type AnyLoan = LoanRequest | CancelledLoanRequest;
@@ -96,7 +93,7 @@ const HOW_STEPS: Array<{ title: string; body: string; image: string }> = [
     image: "/merchant-credit/repay.webp",
   },
 ];
-const STEPS = ["Credit needs", "Business details", "Finances and documents", "Review and submit"];
+const STEPS = ["Loan needs", "Business details", "Finances and documents", "Review and submit"];
 const EMPLOYEE_RANGES = ["1–10", "11–50", "51–100", "100+"];
 // Business details already verified at onboarding (KYC), shown read-only.
 const KYC_ITEMS: Array<[string, string]> = [
@@ -130,15 +127,13 @@ const borrowingText = (form: LoanForm) =>
   form.borrowing === "Yes"
     ? `${form.lender || "Yes"} · ${lkr(form.repayments)} a month · ${lkr(form.outstanding || 0)} owed`
     : form.borrowing || "Not given";
-// A declined request with a list of changes reads as "Changes requested".
-const needsChanges = (request: AnyLoan) =>
-  request.status === "Rejected" && Boolean(request.changes?.length);
-const badgeStatus = (request: AnyLoan) =>
-  needsChanges(request) ? "Changes requested" : request.status;
-const bankName = (id: string) =>
-  lenders.find((lender) => lender.id === id)?.name ??
-  COMING_SOON_BANKS.find((bank) => bank.id === id)?.name ??
-  "Bank";
+// Once sent, the bank either accepts or rejects a request.
+const LOAN_LABELS: Record<string, string> = { Rejected: "Rejected" };
+const loanLabel = (status: string) => LOAN_LABELS[status] ?? statusLabel(status);
+function LoanBadge({ status }: { status: string }) {
+  return <StatusBadge status={status} label={loanLabel(status)} />;
+}
+const bankName = (id: string) => lenders.find((lender) => lender.id === id)?.name ?? "Bank";
 
 function useEligibility() {
   const { settings } = useDemo();
@@ -217,9 +212,10 @@ export function MerchantCreditV1() {
       setIntroStep(0);
       setHelpPing(true);
       introTimer.current = setTimeout(() => setHelpPing(false), 1600);
-    }, 320);
+    }, 400);
   };
   const [introStep, setIntroStep] = useState(0);
+  const introExpanded = !introSeen && introOpen;
   const cancelAction = useAction();
   useEffect(() => {
     if (!freshLoad) return;
@@ -263,22 +259,6 @@ export function MerchantCreditV1() {
     setStep(startStep);
     setApplying(bankId);
   };
-  // Changes requested: start a new request prefilled from the declined one,
-  // on the first step the bank asked to change. Statements must be added again.
-  const resubmit = (request: AnyLoan) => {
-    setData((previous) => ({
-      ...previous,
-      loanDrafts: { ...previous.loanDrafts, [request.bankId]: resubmitDraft(request) },
-    }));
-    startApplication(request.bankId, firstChangeStep(request));
-  };
-  // Requests the bank sent back open straight in the form, with the changes
-  // highlighted, for people who can apply. Everyone else sees the details.
-  const openRequest = (request: AnyLoan) => {
-    if (needsChanges(request) && canManage && eligibility.eligible && !activeFor(request.bankId))
-      resubmit(request);
-    else setOpenId(request.id);
-  };
   const cancelRequest = async (id: string) => {
     const ok = await cancelAction.run(() =>
       setData((previous) => {
@@ -304,10 +284,10 @@ export function MerchantCreditV1() {
     return (
       <V1Page>
         <PageHeader
-          title="Merchant credit"
-          description="Business funding from partner banks. Koko helps you apply."
+          title="Merchant loans"
+          description="Business loans from partner banks. Koko helps you apply."
         />
-        <div className="space-y-4" aria-busy="true" aria-label="Loading merchant credit">
+        <div className="space-y-4" aria-busy="true" aria-label="Loading merchant loans">
           <SkeletonBlock className="h-11 w-64" />
           <SkeletonBlock className="h-36 max-w-[880px]" />
           <SkeletonBlock className="h-64 max-w-[880px]" />
@@ -327,7 +307,7 @@ export function MerchantCreditV1() {
           setApplying(null);
           setStepParam("1");
           setTab(saved ? "requests" : "banks");
-          if (saved) notify("Draft saved", "Continue any time from Merchant credit.");
+          if (saved) notify("Draft saved", "Continue any time from Merchant loans.");
         }}
         onSubmitted={(id) => {
           setApplying(null, { replace: true });
@@ -369,7 +349,7 @@ export function MerchantCreditV1() {
           }
         >
           The bank usually responds in {eligibility.terms.decision}. We'll email{" "}
-          {CURRENT_USER.email} when it does. Sending a request doesn't guarantee credit.
+          {CURRENT_USER.email} when it does. Sending a request doesn't guarantee a loan.
         </DoneCard>
       </V1Page>
     );
@@ -392,25 +372,43 @@ export function MerchantCreditV1() {
   return (
     <V1Page>
       <PageHeader
-        title="Merchant credit"
-        description="Business funding from partner banks. Koko helps you apply."
+        title="Merchant loans"
+        description="Business loans from partner banks. Koko helps you apply."
         actions={
           <Btn
-            variant="tertiary"
+            variant="secondary"
             className={cn(
-              "-ml-3 transition-colors sm:-mr-3 sm:ml-0",
-              helpPing && "bg-[#e6f0f7] ring-2 ring-[#BDDCEE]",
+              "gap-2 border-gray-900 pl-2 pr-3 text-gray-900 transition-[background-color,box-shadow] duration-300 hover:border-gray-900",
+              helpPing && "bg-[#f1f7fb] ring-4 ring-gray-900/10",
             )}
-            aria-expanded={!introSeen && introOpen}
-            onClick={() => (introSeen ? showIntro() : dismissIntro())}
+            aria-expanded={tab === "banks" ? introExpanded : undefined}
+            onClick={() => {
+              if (tab !== "banks") {
+                setTab("banks");
+                if (!introExpanded) showIntro();
+              } else if (introExpanded) dismissIntro();
+              else showIntro();
+            }}
           >
-            <HelpCircle aria-hidden="true" />
-            How merchant credit works
+            <span
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-gray-900 text-white"
+              aria-hidden="true"
+            >
+              <Lightbulb className="!h-3.5 !w-3.5" />
+            </span>
+            How merchant loans work
+            <ChevronDown
+              aria-hidden="true"
+              className={cn(
+                "text-gray-700 motion-safe:transition-transform motion-safe:duration-300",
+                introExpanded && "rotate-180",
+              )}
+            />
           </Btn>
         }
       />
       <UnderlineTabs
-        label="Merchant credit"
+        label="Merchant loans"
         value={tab}
         onChange={(value) => setTab(value as "banks" | "requests")}
         items={[
@@ -420,249 +418,234 @@ export function MerchantCreditV1() {
       />
 
       {tab === "banks" ? (
-        <div className="max-w-[880px] space-y-8">
+        <div className="max-w-[880px]">
           {!introSeen && (
             <div
               className={cn(
-                "grid motion-safe:transition-[grid-template-rows,opacity] motion-safe:duration-300 motion-safe:ease-out",
-                introOpen ? "grid-rows-[1fr] opacity-100" : "-mb-8 grid-rows-[0fr] opacity-0",
+                "grid motion-safe:transition-[grid-template-rows,opacity,margin] motion-safe:duration-[400ms] motion-safe:ease-[cubic-bezier(0.32,0.72,0,1)]",
+                introOpen ? "mb-8 grid-rows-[1fr] opacity-100" : "mb-0 grid-rows-[0fr] opacity-0",
               )}
             >
-              <section
-                aria-labelledby="mc-intro"
-                className={cn(
-                  "relative min-h-0 origin-top-right overflow-hidden rounded-2xl border border-[#BDDCEE] bg-[#f1f7fb] motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-out",
-                  introOpen ? "scale-100" : "scale-[0.4]",
-                )}
-              >
-                <Btn
-                  variant="tertiary"
-                  size="sm"
-                  className="absolute right-2 top-2 z-10 w-11 px-0 sm:w-9"
-                  aria-label="Close introduction"
-                  onClick={dismissIntro}
-                >
-                  <X aria-hidden="true" />
-                </Btn>
-                <div className="grid items-center gap-6 p-5 sm:p-6 md:grid-cols-[240px_minmax(0,1fr)] md:gap-8 md:p-8">
-                  <img
-                    key={HOW_STEPS[introStep].image}
-                    src={HOW_STEPS[introStep].image}
-                    alt=""
-                    width={240}
-                    height={240}
-                    className="mx-auto aspect-square w-full max-w-[200px] rounded-2xl bg-white object-contain motion-safe:animate-in motion-safe:fade-in md:max-w-[240px]"
-                  />
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      <span id="mc-intro">How merchant credit works</span>
-                      <span aria-hidden="true"> · </span>
-                      <span className="normal-case tracking-normal">
-                        {introStep + 1} of {HOW_STEPS.length}
-                      </span>
-                    </p>
-                    <div aria-live="polite">
-                      <h2 className="mt-2 text-xl text-gray-900">{HOW_STEPS[introStep].title}</h2>
-                      <p className="mt-1 max-w-md text-sm text-gray-700">
-                        {HOW_STEPS[introStep].body}
-                      </p>
-                    </div>
-                    <div className="mt-5 flex gap-1.5" role="group" aria-label="Steps">
-                      {HOW_STEPS.map((item, index) => (
-                        <button
-                          key={item.title}
-                          type="button"
-                          aria-label={`Step ${index + 1}: ${item.title}`}
-                          aria-current={index === introStep ? "step" : undefined}
-                          onClick={() => setIntroStep(index)}
-                          className="flex h-6 items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
-                        >
-                          <span
-                            className={cn(
-                              "block h-1.5 rounded-full transition-all",
-                              index === introStep ? "w-6 bg-gray-900" : "w-1.5 bg-gray-400",
-                            )}
-                          />
-                        </button>
-                      ))}
-                    </div>
-                    <div className="mt-5 flex flex-wrap items-center gap-2">
-                      {introStep > 0 && (
-                        <Btn variant="tertiary" onClick={() => setIntroStep(introStep - 1)}>
-                          Back
-                        </Btn>
-                      )}
-                      {introStep < HOW_STEPS.length - 1 ? (
-                        <Btn onClick={() => setIntroStep(introStep + 1)}>
-                          Next
-                          <ArrowRight aria-hidden="true" />
-                        </Btn>
-                      ) : (
-                        <Btn onClick={dismissIntro}>Got it</Btn>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </section>
-            </div>
-          )}
-          {lenders.map((lender) => {
-            const terms = LENDER_TERMS[lender.id];
-            const active = activeFor(lender.id);
-            const draft = data.loanDrafts[lender.id];
-            const open = detailsOpen === lender.id;
-            return (
-              <Card key={lender.id} aria-label={lender.name} className="p-5 sm:p-8">
-                <div className="flex flex-wrap items-center gap-3">
-                  <BankLogo bank={lender.name} />
-                  <div className="min-w-0 flex-1">
-                    <h2 className="text-xl text-gray-900">{lender.name}</h2>
-                    <p className="text-sm text-muted-foreground">Business funding through Koko</p>
-                  </div>
-                  {active && <StatusBadge status={badgeStatus(active)} />}
-                </div>
-                <dl className="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-3">
-                  {[
-                    ["Amount", `Up to ${lkr(terms.max)}`],
-                    [
-                      "Repay over",
-                      `${terms.terms[0]}–${terms.terms[terms.terms.length - 1]} months`,
-                    ],
-                    ["Decision", `In ${terms.decision}`],
-                  ].map(([label, value]) => (
-                    <div key={label}>
-                      <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        {label}
-                      </dt>
-                      <dd className="mt-1 text-base font-semibold text-gray-900">{value}</dd>
-                    </div>
-                  ))}
-                </dl>
-
-                {!active && !eligibility.eligible && (
-                  <EligibilityProgress eligibility={eligibility} />
-                )}
-
-                <div className="mt-7 flex flex-wrap items-center gap-x-4 gap-y-3">
-                  {active ? (
-                    <Btn size="lg" variant="secondary" onClick={() => setOpenId(active.id)}>
-                      View request
-                    </Btn>
-                  ) : !canManage ? (
-                    <p className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <Lock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                      Only Super Admins and Finance Admins can apply for merchant credit.
-                    </p>
-                  ) : !eligibility.eligible ? (
-                    <Btn
-                      size="lg"
-                      variant="secondary"
-                      onClick={() =>
-                        setSearch({
-                          ...Object.fromEntries(VIEW_KEYS.map((key) => [key, null])),
-                          page: null,
-                        })
-                      }
-                    >
-                      Create an order
-                    </Btn>
-                  ) : draft ? (
-                    discarding === lender.id ? (
-                      <DiscardConfirm
-                        onDiscard={() => discardDraft(lender.id)}
-                        onKeep={() => setDiscarding(null)}
-                      />
-                    ) : (
-                      <>
-                        <Btn
-                          size="lg"
-                          className="shadow-md"
-                          onClick={() => startApplication(lender.id)}
-                        >
-                          Continue application
-                          <ArrowRight aria-hidden="true" />
-                        </Btn>
-                        <Btn variant="tertiary" onClick={() => setDiscarding(lender.id)}>
-                          Discard draft
-                        </Btn>
-                      </>
-                    )
-                  ) : (
-                    <Btn
-                      size="lg"
-                      className="shadow-md"
-                      onClick={() => startApplication(lender.id)}
-                    >
-                      Request merchant credit
-                      <ArrowRight aria-hidden="true" />
-                    </Btn>
+              <div className="min-h-0 overflow-hidden">
+                <section
+                  aria-labelledby="mc-intro"
+                  className={cn(
+                    "relative min-h-0 origin-top-right overflow-hidden rounded-2xl border border-[#BDDCEE] bg-[#f1f7fb] motion-safe:transition-transform motion-safe:duration-[400ms] motion-safe:ease-[cubic-bezier(0.32,0.72,0,1)]",
+                    introOpen ? "scale-100" : "scale-[0.5]",
                   )}
+                >
                   <Btn
                     variant="tertiary"
-                    aria-expanded={open}
-                    aria-controls={`mc-details-${lender.id}`}
-                    onClick={() => setDetailsOpen(open ? null : lender.id)}
+                    size="sm"
+                    className="absolute right-2 top-2 z-10 w-11 px-0 sm:w-9"
+                    aria-label="Close introduction"
+                    onClick={dismissIntro}
                   >
-                    {open ? "Hide details" : "Details and requirements"}
-                    <ChevronDown
-                      aria-hidden="true"
-                      className={cn("transition-transform", open && "rotate-180")}
-                    />
+                    <X aria-hidden="true" />
                   </Btn>
-                </div>
-
-                {open && (
-                  <div
-                    id={`mc-details-${lender.id}`}
-                    className="mt-6 grid gap-6 border-t border-gray-100 pt-6 sm:grid-cols-2"
-                  >
-                    {[
-                      [
-                        "Who can apply",
-                        `Businesses selling with Koko for at least ${terms.minMonths} months, with ${lkr(terms.minMonthlySales)} or more in average monthly Koko sales.`,
-                      ],
-                      [
-                        "Interest and fees",
-                        `${terms.rates}. You see the offer before you agree to anything.`,
-                      ],
-                      [
-                        "What you'll need",
-                        "Bank statements for the last 6 months. Your registration certificate and director NIC are already on file from your Koko verification.",
-                      ],
-                      [
-                        "Repayment",
-                        `Monthly instalments paid directly to ${lender.name}. Your Koko payouts aren't affected.`,
-                      ],
-                    ].map(([title, body]) => (
-                      <section key={title}>
-                        <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
-                        <p className="mt-2 text-sm text-muted-foreground">{body}</p>
-                      </section>
-                    ))}
+                  <div className="grid items-center gap-6 p-5 sm:p-6 md:grid-cols-[240px_minmax(0,1fr)] md:gap-8 md:p-8">
+                    <img
+                      key={HOW_STEPS[introStep].image}
+                      src={HOW_STEPS[introStep].image}
+                      alt=""
+                      width={240}
+                      height={240}
+                      className="mx-auto aspect-square w-full max-w-[200px] rounded-2xl bg-white object-contain motion-safe:animate-in motion-safe:fade-in md:max-w-[240px]"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        <span id="mc-intro">How merchant loans work</span>
+                        <span aria-hidden="true"> · </span>
+                        <span className="normal-case tracking-normal">
+                          {introStep + 1} of {HOW_STEPS.length}
+                        </span>
+                      </p>
+                      <div aria-live="polite">
+                        <h2 className="mt-2 text-xl text-gray-900">{HOW_STEPS[introStep].title}</h2>
+                        <p className="mt-1 max-w-md text-sm text-gray-700">
+                          {HOW_STEPS[introStep].body}
+                        </p>
+                      </div>
+                      <div className="mt-5 flex gap-1.5" role="group" aria-label="Steps">
+                        {HOW_STEPS.map((item, index) => (
+                          <button
+                            key={item.title}
+                            type="button"
+                            aria-label={`Step ${index + 1}: ${item.title}`}
+                            aria-current={index === introStep ? "step" : undefined}
+                            onClick={() => setIntroStep(index)}
+                            className="flex h-6 items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
+                          >
+                            <span
+                              className={cn(
+                                "block h-1.5 rounded-full transition-all",
+                                index === introStep ? "w-6 bg-gray-900" : "w-1.5 bg-gray-400",
+                              )}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                      <div className="mt-5 flex flex-wrap items-center gap-2">
+                        {introStep > 0 && (
+                          <Btn variant="tertiary" onClick={() => setIntroStep(introStep - 1)}>
+                            Back
+                          </Btn>
+                        )}
+                        {introStep < HOW_STEPS.length - 1 ? (
+                          <Btn onClick={() => setIntroStep(introStep + 1)}>
+                            Next
+                            <ArrowRight aria-hidden="true" />
+                          </Btn>
+                        ) : (
+                          <Btn onClick={dismissIntro}>Got it</Btn>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                )}
-              </Card>
-            );
-          })}
+                </section>
+              </div>
+            </div>
+          )}
+          <div className="space-y-8">
+            {lenders.map((lender) => {
+              const terms = LENDER_TERMS[lender.id];
+              const active = activeFor(lender.id);
+              const draft = data.loanDrafts[lender.id];
+              const open = detailsOpen === lender.id;
+              return (
+                <Card key={lender.id} aria-label={lender.name} className="p-5 sm:p-8">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <BankLogo bank={lender.name} />
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-xl text-gray-900">{lender.name}</h2>
+                      <p className="text-sm text-muted-foreground">Business loans through Koko</p>
+                    </div>
+                    {active && <LoanBadge status={active.status} />}
+                  </div>
+                  <dl className="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-3">
+                    {[
+                      ["Amount", `Up to ${lkr(terms.max)}`],
+                      [
+                        "Repay over",
+                        `${terms.terms[0]}–${terms.terms[terms.terms.length - 1]} months`,
+                      ],
+                      ["Decision", `In ${terms.decision}`],
+                    ].map(([label, value]) => (
+                      <div key={label}>
+                        <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          {label}
+                        </dt>
+                        <dd className="mt-1 text-base font-semibold text-gray-900">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
 
-          <section aria-labelledby="mc-soon" className="space-y-3">
-            <h2 id="mc-soon" className="text-sm font-semibold text-gray-900">
-              More banks coming soon
-            </h2>
-            <ul className="flex flex-wrap gap-2">
-              {COMING_SOON_BANKS.map((bank) => (
-                <li
-                  key={bank.id}
-                  className="flex items-center gap-2 rounded-full border border-gray-200 bg-white py-1 pl-1 pr-3 text-sm text-gray-700"
-                >
-                  <span className="origin-left scale-75" aria-hidden="true">
-                    <BankLogo bank={bank.name} />
-                  </span>
-                  <span className="-ml-2">{bank.name}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
+                  {!active && !eligibility.eligible && (
+                    <EligibilityProgress eligibility={eligibility} />
+                  )}
+
+                  <div className="mt-7 flex flex-wrap items-center gap-x-4 gap-y-3">
+                    {active ? (
+                      <Btn size="lg" variant="secondary" onClick={() => setOpenId(active.id)}>
+                        View request
+                      </Btn>
+                    ) : !canManage ? (
+                      <p className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <Lock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                        Only Super Admins and Finance Admins can apply for a merchant loan.
+                      </p>
+                    ) : !eligibility.eligible ? (
+                      <Btn
+                        size="lg"
+                        variant="secondary"
+                        onClick={() =>
+                          setSearch({
+                            ...Object.fromEntries(VIEW_KEYS.map((key) => [key, null])),
+                            page: null,
+                          })
+                        }
+                      >
+                        Create an order
+                      </Btn>
+                    ) : draft ? (
+                      discarding === lender.id ? (
+                        <DiscardConfirm
+                          onDiscard={() => discardDraft(lender.id)}
+                          onKeep={() => setDiscarding(null)}
+                        />
+                      ) : (
+                        <>
+                          <Btn
+                            size="lg"
+                            className="shadow-md"
+                            onClick={() => startApplication(lender.id)}
+                          >
+                            Continue application
+                            <ArrowRight aria-hidden="true" />
+                          </Btn>
+                          <Btn variant="tertiary" onClick={() => setDiscarding(lender.id)}>
+                            Discard draft
+                          </Btn>
+                        </>
+                      )
+                    ) : (
+                      <Btn
+                        size="lg"
+                        className="shadow-md"
+                        onClick={() => startApplication(lender.id)}
+                      >
+                        Request a loan
+                        <ArrowRight aria-hidden="true" />
+                      </Btn>
+                    )}
+                    <Btn
+                      variant="tertiary"
+                      aria-expanded={open}
+                      aria-controls={`mc-details-${lender.id}`}
+                      onClick={() => setDetailsOpen(open ? null : lender.id)}
+                    >
+                      {open ? "Hide details" : "Details and requirements"}
+                      <ChevronDown
+                        aria-hidden="true"
+                        className={cn("transition-transform", open && "rotate-180")}
+                      />
+                    </Btn>
+                  </div>
+
+                  {open && (
+                    <div
+                      id={`mc-details-${lender.id}`}
+                      className="mt-6 grid gap-6 border-t border-gray-100 pt-6 sm:grid-cols-2"
+                    >
+                      {[
+                        [
+                          "Who can apply",
+                          `Businesses selling with Koko for at least ${terms.minMonths} months, with ${lkr(terms.minMonthlySales)} or more in average monthly Koko sales.`,
+                        ],
+                        [
+                          "Interest and fees",
+                          `${terms.rates}. You see the offer before you agree to anything.`,
+                        ],
+                        [
+                          "What you'll need",
+                          "Bank statements for the last 6 months. Your registration certificate and director NIC are already on file from your Koko verification.",
+                        ],
+                        [
+                          "Repayment",
+                          `Monthly instalments paid directly to ${lender.name}. Your Koko payouts aren't affected.`,
+                        ],
+                      ].map(([title, body]) => (
+                        <section key={title}>
+                          <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+                          <p className="mt-2 text-sm text-muted-foreground">{body}</p>
+                        </section>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
         </div>
       ) : (
         <div className="space-y-4">
@@ -675,7 +658,7 @@ export function MerchantCreditV1() {
               { value: "draft", label: "Drafts", count: counts.draft },
               { value: "Pending", label: "In review", count: counts.Pending },
               { value: "Accepted", label: "Accepted", count: counts.Accepted },
-              { value: "Rejected", label: "Declined", count: counts.Rejected },
+              { value: "Rejected", label: "Rejected", count: counts.Rejected },
               { value: "Cancelled", label: "Cancelled", count: counts.Cancelled },
             ]}
           />
@@ -728,7 +711,7 @@ export function MerchantCreditV1() {
             <>
               <div className={cn(SURFACE_LIGHT, "hidden overflow-hidden lg:block")}>
                 <table className="w-full text-left text-sm">
-                  <caption className="sr-only">Merchant credit requests</caption>
+                  <caption className="sr-only">Merchant loan requests</caption>
                   <thead className="bg-[#f6f6f8] text-xs text-muted-foreground">
                     <tr>
                       <th scope="col" className="px-5 py-3 font-medium">
@@ -768,14 +751,14 @@ export function MerchantCreditV1() {
                         </td>
                         <td className="whitespace-nowrap px-5 py-3.5">{fmtDate(request.date)}</td>
                         <td className="px-5 py-3.5">
-                          <StatusBadge status={badgeStatus(request)} />
+                          <LoanBadge status={request.status} />
                         </td>
                         <td className="px-5 py-3.5 text-right">
                           <Btn
                             variant="tertiary"
                             size="sm"
                             aria-label={`View, ${request.id}`}
-                            onClick={() => openRequest(request)}
+                            onClick={() => setOpenId(request.id)}
                           >
                             View
                           </Btn>
@@ -790,7 +773,7 @@ export function MerchantCreditV1() {
                   <li key={request.id}>
                     <button
                       type="button"
-                      onClick={() => openRequest(request)}
+                      onClick={() => setOpenId(request.id)}
                       className={cn(
                         SURFACE_LIGHT,
                         "w-full space-y-3 p-4 text-left transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900",
@@ -808,7 +791,7 @@ export function MerchantCreditV1() {
                             </span>
                           </span>
                         </span>
-                        <StatusBadge status={badgeStatus(request)} />
+                        <LoanBadge status={request.status} />
                       </span>
                       <span className="flex flex-wrap justify-between gap-2 text-sm">
                         <span className="font-medium tabular-nums">{lkr(request.form.amount)}</span>
@@ -828,7 +811,7 @@ export function MerchantCreditV1() {
               <p className="text-base font-semibold">
                 {filter === "all"
                   ? "No requests yet"
-                  : `No ${filter === "draft" ? "drafts" : statusLabel(filter).toLowerCase() + " requests"}`}
+                  : `No ${filter === "draft" ? "drafts" : loanLabel(filter).toLowerCase() + " requests"}`}
               </p>
               <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
                 {filter === "all"
@@ -858,7 +841,7 @@ export function MerchantCreditV1() {
             cancelAction.clearError();
           }
         }}
-        title="Merchant credit request"
+        title="Merchant loan request"
         description={detail ? `${bankName(detail.bankId)} · ${detail.id}` : undefined}
         footer={
           detail?.status === "Accepted" ? (
@@ -882,22 +865,6 @@ export function MerchantCreditV1() {
                 needs.
               </p>
             </div>
-          ) : detail &&
-            needsChanges(detail) &&
-            canManage &&
-            eligibility.eligible &&
-            !activeFor(detail.bankId) ? (
-            <Btn
-              block
-              className="sm:w-full"
-              onClick={() => {
-                setOpenId(null);
-                resubmit(detail);
-              }}
-            >
-              Make changes and resubmit
-              <ArrowRight aria-hidden="true" />
-            </Btn>
           ) : detail?.status === "Pending" && canManage ? (
             confirmCancel ? (
               <div className="space-y-3">
@@ -942,8 +909,7 @@ export function MerchantCreditV1() {
               canManage && eligibility.eligible && !activeFor(detail.bankId)
                 ? () => {
                     setOpenId(null);
-                    if (needsChanges(detail)) resubmit(detail);
-                    else startApplication(detail.bankId);
+                    startApplication(detail.bankId);
                   }
                 : undefined
             }
@@ -992,7 +958,7 @@ function EligibilityProgress({ eligibility }: { eligibility: ReturnType<typeof u
       className="mt-7 rounded-xl border border-amber-200 bg-amber-50/60 p-4 sm:p-5"
     >
       <h3 id="mc-eligibility" className="text-sm font-semibold text-gray-900">
-        You're not eligible for merchant credit yet
+        You're not eligible for a merchant loan yet
       </h3>
       <p className="mt-1 text-sm text-gray-700">
         {`You can apply once your business takes ${lkr(terms.minMonthlySales)} a month through Koko, on average over the last 6 months.`}
@@ -1062,10 +1028,10 @@ function timelineFor(request: AnyLoan): TimelineItem[] {
     });
   } else if (request.status === "Rejected") {
     items.push({
-      label: needsChanges(request) ? "Changes requested" : "Declined",
+      label: "Rejected",
       date: request.decidedAt ? fmtDateTime(request.decidedAt) : undefined,
-      note: needsChanges(request) ? "Make the changes and resubmit." : request.reason,
-      state: needsChanges(request) ? "current" : "failed",
+      note: request.reason,
+      state: "failed",
     });
   } else {
     items.push({
@@ -1081,7 +1047,7 @@ function LoanDetail({ request, onRestart }: { request: AnyLoan; onRestart?: () =
   const form = request.form;
   return (
     <div className="space-y-6">
-      <StatusBadge status={badgeStatus(request)} />
+      <LoanBadge status={request.status} />
       {request.status === "Accepted" && (
         <InlineAlert tone="success" title={`${bankName(request.bankId)} accepted your request`}>
           {request.offer ? (
@@ -1100,16 +1066,10 @@ function LoanDetail({ request, onRestart }: { request: AnyLoan; onRestart?: () =
           </p>
         </InlineAlert>
       )}
-      {needsChanges(request) && (
-        <InlineAlert tone="warning" title={`${bankName(request.bankId)} asked for changes`}>
-          <p>{request.reason}</p>
-          <ChangeList changes={request.changes ?? []} />
-        </InlineAlert>
-      )}
-      {request.status === "Rejected" && !needsChanges(request) && (
+      {request.status === "Rejected" && (
         <InlineAlert
           tone="error"
-          title="The bank declined this request"
+          title={`${bankName(request.bankId)} rejected this request`}
           action={
             onRestart && (
               <Btn size="sm" variant="secondary" onClick={onRestart}>
@@ -1122,7 +1082,7 @@ function LoanDetail({ request, onRestart }: { request: AnyLoan; onRestart?: () =
         </InlineAlert>
       )}
       <Timeline items={timelineFor(request)} />
-      <DetailGroup title="Credit needs">
+      <DetailGroup title="Loan needs">
         <DefinitionList
           items={[
             ["Requested amount", lkr(form.amount)],
@@ -1147,7 +1107,7 @@ function LoanDetail({ request, onRestart }: { request: AnyLoan; onRestart?: () =
         <DefinitionList
           items={[
             ["Average monthly revenue", lkr(form.revenue)],
-            ["Existing loans or credit", borrowingText(form)],
+            ["Existing loans", borrowingText(form)],
             ["Bank statements", form.statements || "Not attached"],
             ["Financial statements", form.accounts || "Not added"],
           ]}
@@ -1160,42 +1120,6 @@ function LoanDetail({ request, onRestart }: { request: AnyLoan; onRestart?: () =
         </p>
       )}
     </div>
-  );
-}
-
-type Change = NonNullable<LoanRequest["changes"]>[number];
-function ChangeList({
-  changes,
-  resolved,
-}: {
-  changes: Change[];
-  resolved?: (change: Change) => boolean;
-}) {
-  return (
-    <ol className="mt-3 space-y-2">
-      {changes.map((change, index) => {
-        const done = resolved?.(change);
-        return (
-          <li key={change.title} className="flex gap-2">
-            <span className="font-semibold">{index + 1}.</span>
-            <span>
-              <span className="flex flex-wrap items-center gap-x-2 font-semibold">
-                <span className={cn(done && "line-through decoration-amber-700/60")}>
-                  {change.title}
-                </span>
-                {done && (
-                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-800 no-underline">
-                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                    Updated
-                  </span>
-                )}
-              </span>
-              <span className="block">{change.note}</span>
-            </span>
-          </li>
-        );
-      })}
-    </ol>
   );
 }
 
@@ -1291,31 +1215,15 @@ function Application({
   }, [step]);
 
   const amount = Number(form.amount || 0);
-  const resubmitted = data.loans.find((request) => request.id === form.resubmitOf);
-  const stepChanges = (resubmitted?.changes ?? []).filter(
-    (change) => step === 3 || change.step === step,
-  );
-  // A requested change is done once any of its fields differs from the request
-  // the bank sent back (statements: once a new file is attached).
-  const resolved = (change: Change) =>
-    (change.fields ?? []).some((field) =>
-      field === "mc-statements"
-        ? Boolean(files.statements)
-        : form[field.replace("mc-", "") as keyof LoanForm] !==
-          resubmitted?.form[field.replace("mc-", "") as keyof LoanForm],
-    );
-  const attentionFor = (field: string) =>
-    resubmitted?.changes?.find((change) => change.fields?.includes(field) && !resolved(change))
-      ?.title;
   const errorsFor = (index: number) => {
     const next: Record<string, string> = {};
     if (index === 0) {
       if (!form.amount) next["mc-amount"] = "Enter how much you'd like to request.";
       else if (amount < terms.min || amount > terms.max)
         next["mc-amount"] = `Enter an amount between ${lkr(terms.min)} and ${lkr(terms.max)}.`;
-      if (!form.purpose) next["mc-purpose"] = "Choose what the credit is for.";
+      if (!form.purpose) next["mc-purpose"] = "Choose what the loan is for.";
       else if (form.purpose === "Other" && !form.purposeOther?.trim())
-        next["mc-purpose-other"] = "Tell the bank what the credit is for.";
+        next["mc-purpose-other"] = "Tell the bank what the loan is for.";
       if (!form.term) next["mc-term"] = "Choose a repayment period.";
       if (!form.security)
         next["mc-security"] = "Choose the security you can offer, or No security.";
@@ -1421,11 +1329,11 @@ function Application({
     <V1Page>
       <FlowLayout
         back={{
-          label: step === 0 ? "Merchant credit" : "Back",
+          label: step === 0 ? "Merchant loans" : "Back",
           onClick: () => (step === 0 ? onExit(Boolean(saved)) : setStep(step - 1)),
         }}
         logo={<BankLogo bank={bank} />}
-        title="Request merchant credit"
+        title="Request a loan"
         subtitle={titles[1]}
         steps={STEPS}
         current={step}
@@ -1456,20 +1364,6 @@ function Application({
           </>
         }
       >
-        {stepChanges.length > 0 && (
-          <div className="mb-7">
-            <InlineAlert
-              tone="warning"
-              title={
-                step === 3
-                  ? `Check the changes ${bank} asked for`
-                  : `${bank} asked you to change this`
-              }
-            >
-              <ChangeList changes={stepChanges} resolved={resolved} />
-            </InlineAlert>
-          </div>
-        )}
         <div className="mb-7 empty:hidden">
           <ErrorSummary errors={attempts[step] ? errors : {}} focusKey={attempts[step] ?? 0} />
         </div>
@@ -1479,7 +1373,6 @@ function Application({
             <div className="space-y-3">
               <CurrencyInput
                 id="mc-amount"
-                attention={attentionFor("mc-amount")}
                 label="Amount"
                 value={form.amount}
                 onChange={(value) => update("amount", value)}
@@ -1516,7 +1409,6 @@ function Application({
             </div>
             <SelectInput
               id="mc-purpose"
-              attention={attentionFor("mc-purpose")}
               label="What's it for?"
               placeholder="Choose a purpose"
               value={form.purpose}
@@ -1545,7 +1437,6 @@ function Application({
             )}
             <SelectInput
               id="mc-term"
-              attention={attentionFor("mc-term")}
               label="Repayment period"
               placeholder="Choose a period"
               hint="The bank confirms the final term."
@@ -1562,7 +1453,6 @@ function Application({
             />
             <SelectInput
               id="mc-security"
-              attention={attentionFor("mc-security")}
               label="Security you can offer"
               placeholder="Choose security"
               hint="Security can help with larger amounts. Choose No security for an unsecured request."
@@ -1599,7 +1489,6 @@ function Application({
             </section>
             <SelectInput
               id="mc-employees"
-              attention={attentionFor("mc-employees")}
               label="Number of employees"
               placeholder="Choose a range"
               value={form.employees ?? ""}
@@ -1614,7 +1503,6 @@ function Application({
             <div className="grid gap-7 sm:grid-cols-2 sm:gap-5">
               <TextInput
                 id="mc-contact"
-                attention={attentionFor("mc-contact")}
                 label="Contact person"
                 autoComplete="name"
                 value={form.contact}
@@ -1624,7 +1512,6 @@ function Application({
               />
               <TextInput
                 id="mc-designation"
-                attention={attentionFor("mc-designation")}
                 label="Their role"
                 autoComplete="organization-title"
                 value={form.designation ?? ""}
@@ -1636,7 +1523,6 @@ function Application({
             <div className="grid gap-7 sm:grid-cols-2 sm:gap-5">
               <TextInput
                 id="mc-phone"
-                attention={attentionFor("mc-phone")}
                 label="Mobile number"
                 type="tel"
                 inputMode="tel"
@@ -1648,7 +1534,6 @@ function Application({
               />
               <TextInput
                 id="mc-email"
-                attention={attentionFor("mc-email")}
                 label="Email"
                 type="email"
                 autoComplete="email"
@@ -1665,7 +1550,6 @@ function Application({
           <div className="flex flex-col gap-7">
             <CurrencyInput
               id="mc-revenue"
-              attention={attentionFor("mc-revenue")}
               label="Average monthly revenue"
               value={form.revenue}
               onChange={(value) => update("revenue", value)}
@@ -1675,7 +1559,7 @@ function Application({
             />
             <RadioCards
               name="mc-borrowing"
-              legend="Does the business have existing loans or credit?"
+              legend="Does the business have any existing loans?"
               value={form.borrowing}
               onChange={(value) => {
                 update("borrowing", value);
@@ -1691,7 +1575,6 @@ function Application({
               <>
                 <TextInput
                   id="mc-lender"
-                  attention={attentionFor("mc-lender")}
                   label="Bank or lender"
                   value={form.lender ?? ""}
                   onChange={(event) => update("lender", event.target.value)}
@@ -1702,7 +1585,6 @@ function Application({
                 <div className="grid gap-7 sm:grid-cols-2 sm:gap-5">
                   <CurrencyInput
                     id="mc-repayments"
-                    attention={attentionFor("mc-repayments")}
                     label="Total monthly repayments"
                     value={form.repayments}
                     onChange={(value) => update("repayments", value)}
@@ -1711,7 +1593,6 @@ function Application({
                   />
                   <CurrencyInput
                     id="mc-outstanding"
-                    attention={attentionFor("mc-outstanding")}
                     label="Total still owed"
                     value={form.outstanding ?? ""}
                     onChange={(value) => update("outstanding", value)}
@@ -1739,7 +1620,6 @@ function Application({
               </ul>
               <FileDrop
                 id="mc-statements"
-                attention={attentionFor("mc-statements")}
                 label="Bank statements for the last 6 months"
                 hint="One PDF with all 6 months, from the account your business uses most."
                 file={files.statements ?? null}
@@ -1753,7 +1633,6 @@ function Application({
               />
               <FileDrop
                 id="mc-accounts"
-                attention={attentionFor("mc-accounts")}
                 label="Latest financial statements (optional)"
                 hint="Audited accounts or management accounts. They can help the bank decide faster."
                 file={files.accounts ?? null}
@@ -1773,7 +1652,7 @@ function Application({
           <div className="flex flex-col gap-7">
             {[
               {
-                title: "Credit needs",
+                title: "Loan needs",
                 index: 0,
                 items: [
                   ["Amount", lkr(form.amount)],
@@ -1798,7 +1677,7 @@ function Application({
                 index: 2,
                 items: [
                   ["Average monthly revenue", lkr(form.revenue)],
-                  ["Existing loans or credit", borrowingText(form)],
+                  ["Existing loans", borrowingText(form)],
                   ["Bank statements", form.statements ?? ""],
                   ["Financial statements", form.accounts || "Not added"],
                 ],
@@ -1849,7 +1728,7 @@ function Application({
                 >
                   terms and privacy notice
                 </button>
-                . Sending a request doesn't guarantee credit.
+                . Sending a request doesn't guarantee a loan.
               </p>
             </section>
             {submitAction.error && (

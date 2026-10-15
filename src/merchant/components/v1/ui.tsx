@@ -950,6 +950,41 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
   );
 });
 
+export function TextArea({
+  id,
+  label,
+  hint,
+  error,
+  optional,
+  aside,
+  className,
+  ...input
+}: ComponentProps<"textarea"> & {
+  id: string;
+  label: ReactNode;
+  hint?: ReactNode;
+  error?: string;
+  optional?: boolean;
+  aside?: ReactNode;
+}) {
+  const soft = useSoft();
+  return (
+    <FieldShell id={id} label={label} hint={hint} error={error} optional={optional} aside={aside}>
+      <textarea
+        id={id}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={describedBy(id, { hint, error })}
+        className={cn(
+          fieldClass(error, soft, Boolean(input.value && String(input.value).trim())),
+          "h-auto min-h-[104px] resize-y py-3 leading-relaxed sm:h-auto",
+          className,
+        )}
+        {...input}
+      />
+    </FieldShell>
+  );
+}
+
 export function CurrencyInput({
   value,
   onChange,

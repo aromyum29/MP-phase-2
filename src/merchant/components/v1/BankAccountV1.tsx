@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
-import { ArrowRight, CheckCircle2, ChevronRight, Lock } from "lucide-react";
+import { ArrowRight, ChevronRight, Lock } from "lucide-react";
 import { BankLogo } from "../BankLogo";
 import { cn } from "../ui/utils";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "../ui/input-otp";
@@ -11,17 +11,14 @@ import {
   type CancelledBankRequest,
 } from "../FinanceData";
 import { useAction, useCanManageFinance, useFirstLoad } from "./demo";
+import { BANKS, BUSINESS, CURRENT_USER, DEMO_OTP, LEGAL, REVIEW_TIMES } from "./placeholders";
 import {
-  BANKS,
-  BUSINESS,
-  CURRENT_USER,
-  DEMO_OTP,
-  LEGAL,
-  NEXT_PAYOUT,
-  REVIEW_TIMES,
-} from "./placeholders";
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from "../ui/alert-dialog";
 import {
-  BackLink,
   Btn,
   Checkbox,
   Combobox,
@@ -40,19 +37,17 @@ import {
   FlowSecondary,
   StatusBadge,
   StatusBar,
+  TextArea,
   TextInput,
   Timeline,
   V1Page,
-  CopyButton,
-  addBusinessDays,
   fileSize,
   fmtDate,
   fmtDateTime,
-  lkr,
   notify,
   type TimelineItem,
 } from "./ui";
-import { VIEW_KEYS, useOptionalParam, useSetSearch, useViewParam } from "./url";
+import { useOptionalParam, useSetSearch, useViewParam } from "./url";
 
 type View = "overview" | "details" | "review" | "verify" | "done";
 type AnyRequest = BankRequest | CancelledBankRequest;
@@ -61,18 +56,9 @@ const STEP_VIEWS: View[] = ["details", "review", "verify"];
 const group = (digits: string) => digits.replace(/(\d{4})(?=\d)/g, "$1 ");
 const mask = (digits: string) => `•••• ${digits.slice(-4)}`;
 const accountLabel = (account: Account) => `${account.bank} ${mask(account.number)}`;
-const reviewDays = 2;
-const nextPayout = () => {
-  const date = new Date();
-  const days = (NEXT_PAYOUT.weekday - date.getDay() + 7) % 7 || 7;
-  date.setDate(date.getDate() + days);
-  return date.toLocaleDateString("en-GB", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    timeZone: "Asia/Colombo",
-  });
-};
+const REASON_MAX = 300;
+// Review times aren't promised: payouts simply stay on the current account.
+const UNTIL_REVIEWED = "Until then, payouts keep going to your current account.";
 
 // Label and value styles for the summary card.
 const labelClass = "text-xs font-medium uppercase tracking-wider text-muted-foreground";
@@ -116,7 +102,7 @@ export function BankAccountV1() {
   const setSearch = useSetSearch();
   const [receipt, setReceipt] = useState<string | null>(null);
   const submitted = useRef(false);
-  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmSend, setConfirmSend] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const firstRender = useRef(true);
   useEffect(() => {
@@ -151,6 +137,7 @@ export function BankAccountV1() {
 
   /* ---------- Form state ---------- */
   const [confirmNumber, setConfirmNumber] = useState("");
+  const [reason, setReason] = useState("");
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [attempt, setAttempt] = useState(0);
   const [fileError, setFileError] = useState<string>();
@@ -172,8 +159,18 @@ export function BankAccountV1() {
     else if (confirmNumber !== digits)
       next["ba-confirm"] = "The account numbers don't match. Check both and try again.";
     if (!statement) next["ba-statement"] = "Attach a bank statement for the new account.";
+    if (!reason.trim()) next["ba-reason"] = "Tell Koko why you're changing the payout account.";
     return next;
-  }, [bankDraft.bank, bankDraft.branch, digits, bankEntry, data.account, confirmNumber, statement]);
+  }, [
+    bankDraft.bank,
+    bankDraft.branch,
+    digits,
+    bankEntry,
+    data.account,
+    confirmNumber,
+    statement,
+    reason,
+  ]);
   const shown = (key: string) => (attempt > 0 || touched[key] ? errors[key] : undefined);
   const touch = (key: string) => setTouched((previous) => ({ ...previous, [key]: true }));
   const update = (key: keyof Account, value: string) =>
@@ -189,7 +186,6 @@ export function BankAccountV1() {
   const [codeError, setCodeError] = useState<string>();
   const [resendIn, setResendIn] = useState(30);
   const submitAction = useAction();
-  const cancelAction = useAction();
   useEffect(() => {
     if (view !== "verify" || resendIn <= 0) return;
     const timer = setTimeout(() => setResendIn((value) => value - 1), 1000);
@@ -227,9 +223,13 @@ export function BankAccountV1() {
     setAttempt((value) => value + 1);
     if (!Object.keys(errors).length) setView("review");
   };
+  // Sent requests can't be cancelled, so confirm before the code is sent.
   const toVerify = () => {
     setAttestAttempt((value) => value + 1);
-    if (!attest) return;
+    if (attest) setConfirmSend(true);
+  };
+  const startVerify = () => {
+    setConfirmSend(false);
     setCode("");
     setCodeError(undefined);
     setResendIn(30);
@@ -260,6 +260,7 @@ export function BankAccountV1() {
                     number: digits,
                   },
                   filename: statement.name,
+                  changeReason: reason.trim(),
                   requestedBy: CURRENT_USER.username,
                   from: previous.account,
                   verifiedAt: now,
@@ -271,32 +272,13 @@ export function BankAccountV1() {
       setBankDraft({ holder: "", bank: "", branch: "", number: "" });
       setStatement(null);
       setConfirmNumber("");
+      setReason("");
     });
     if (ok) {
       submitted.current = true;
       setReceipt(id);
       setView("done");
       notify("Account change submitted", `Reference ${id}`);
-    }
-  };
-  const cancelRequest = async (id: string) => {
-    const ok = await cancelAction.run(() =>
-      setData((previous) => {
-        const request = previous.bankRequests.find((item) => item.id === id);
-        if (!request || request.status !== "Pending") return previous;
-        return {
-          ...previous,
-          bankRequests: previous.bankRequests.filter((item) => item.id !== id),
-          cancelledBankRequests: [
-            { ...request, status: "Cancelled", cancelledAt: new Date().toISOString() },
-            ...(previous.cancelledBankRequests ?? []),
-          ],
-        };
-      }),
-    );
-    if (ok) {
-      setConfirmCancel(false);
-      notify("Request cancelled", "Your payout account hasn't changed.");
     }
   };
 
@@ -343,7 +325,7 @@ export function BankAccountV1() {
           >
             {pending ? (
               <StatusBar tone="pending" className="text-sm">
-                Change in review · Expected by {fmtDate(addBusinessDays(pending.date, reviewDays))}
+                Change in review · Submitted {fmtDate(pending.date)}
               </StatusBar>
             ) : activeFrom ? (
               <StatusBar tone="info" className="text-sm">
@@ -382,16 +364,7 @@ export function BankAccountV1() {
                     {data.account.holder} · {data.account.branch} branch
                   </p>
                 </div>
-                <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                  <div>
-                    <dt className={labelClass}>Next payout</dt>
-                    <dd className={valueClass}>
-                      <span className="tabular-nums">{lkr(NEXT_PAYOUT.amount)}</span>{" "}
-                      <span className="whitespace-nowrap font-normal text-gray-700">
-                        on {nextPayout()}
-                      </span>
-                    </dd>
-                  </div>
+                <dl className="grid gap-4 empty:hidden">
                   {pending ? (
                     <div>
                       <dt className={labelClass}>Requested change</dt>
@@ -410,17 +383,6 @@ export function BankAccountV1() {
                 {pending ? (
                   <>
                     <CardAction onClick={() => setOpenId(pending.id)}>View request</CardAction>
-                    {canManage && (
-                      <CardAction
-                        tone="danger"
-                        onClick={() => {
-                          setConfirmCancel(true);
-                          setOpenId(pending.id);
-                        }}
-                      >
-                        Cancel request
-                      </CardAction>
-                    )}
                   </>
                 ) : (
                   canManage && (
@@ -429,29 +391,12 @@ export function BankAccountV1() {
                     </CardAction>
                   )
                 )}
-                <CardAction
-                  onClick={() =>
-                    setSearch({
-                      ...Object.fromEntries(VIEW_KEYS.map((key) => [key, null])),
-                      page: "financial-statement",
-                    })
-                  }
-                >
-                  Payout history
-                </CardAction>
                 <p className="flex items-start gap-1.5 px-1 pt-1 text-xs text-muted-foreground">
                   {canManage ? (
-                    pending ? (
-                      <>
-                        Payouts keep going to {mask(data.account.number)} until the change is
-                        approved.
-                      </>
-                    ) : (
-                      <>
-                        Changes are reviewed in {REVIEW_TIMES.bankAccount}. Payouts continue
-                        meanwhile.
-                      </>
-                    )
+                    <>
+                      {pending ? "Koko is reviewing the change." : "Koko will review the change."}{" "}
+                      {UNTIL_REVIEWED}
+                    </>
                   ) : (
                     <>
                       <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -629,6 +574,22 @@ export function BankAccountV1() {
               onRemove={() => setStatement(null)}
               onReject={(message) => setFileError(message)}
             />
+            <TextArea
+              id="ba-reason"
+              label="Reason for change"
+              placeholder="For example, we've moved our business banking to a new bank."
+              value={reason}
+              maxLength={REASON_MAX}
+              rows={3}
+              onChange={(event) => setReason(event.target.value)}
+              onBlur={() => touch("ba-reason")}
+              error={shown("ba-reason")}
+              aside={
+                <span className="text-xs tabular-nums text-muted-foreground" aria-hidden="true">
+                  {reason.length}/{REASON_MAX}
+                </span>
+              }
+            />
           </div>
         </FlowLayout>
       )}
@@ -701,6 +662,9 @@ export function BankAccountV1() {
                   "Not attached"
                 )}
               </SummaryRow>
+              <SummaryRow label="Reason">
+                <span className="whitespace-pre-line break-words font-normal">{reason.trim()}</span>
+              </SummaryRow>
             </dl>
             <section aria-labelledby="ba-next">
               <h3 id="ba-next" className="mb-4 text-sm font-semibold text-gray-900">
@@ -715,7 +679,7 @@ export function BankAccountV1() {
                   },
                   {
                     label: "Koko reviews the change",
-                    note: `Usually ${REVIEW_TIMES.bankAccount}. Payouts keep going to ${mask(data.account.number)}.`,
+                    note: UNTIL_REVIEWED,
                     state: "upcoming",
                   },
                   {
@@ -726,6 +690,10 @@ export function BankAccountV1() {
                 ]}
               />
             </section>
+            <InlineAlert tone="warning" title="You can't cancel this request once it's sent">
+              Check the new account details carefully. To undo a change after it's sent, you'd need
+              to submit another request.
+            </InlineAlert>
             <Checkbox
               id="ba-attest"
               checked={attest}
@@ -739,6 +707,23 @@ export function BankAccountV1() {
               {LEGAL.bankAccountAttestation(BUSINESS.name)}
             </Checkbox>
           </div>
+          <AlertDialog open={confirmSend} onOpenChange={setConfirmSend}>
+            <AlertDialogContent className="koko-v1 gap-0 rounded-2xl p-6 sm:max-w-md sm:p-7">
+              <AlertDialogTitle className="text-lg font-semibold text-gray-900">
+                Are you sure you want to continue?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Once you verify, the request is sent to Koko and can't be cancelled.{" "}
+                {UNTIL_REVIEWED}
+              </AlertDialogDescription>
+              <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Btn variant="secondary" onClick={() => setConfirmSend(false)}>
+                  Go back
+                </Btn>
+                <Btn onClick={startVerify}>Yes, continue</Btn>
+              </div>
+            </AlertDialogContent>
+          </AlertDialog>
         </FlowLayout>
       )}
 
@@ -848,7 +833,7 @@ export function BankAccountV1() {
             { label: "Verified with SMS code", state: "done" },
             {
               label: "Koko review",
-              note: `Expected by ${fmtDate(addBusinessDays(new Date().toISOString(), reviewDays))}`,
+              note: UNTIL_REVIEWED,
               state: "current",
             },
             {
@@ -862,59 +847,15 @@ export function BankAccountV1() {
           }
         >
           We'll email {CURRENT_USER.email} and the account owner ({CURRENT_USER.ownerEmail}) when
-          it's reviewed. Payouts keep going to{" "}
-          <span className="whitespace-nowrap">{mask(data.account.number)}</span> until then.
+          it's reviewed. Payouts keep going to your current account until then.
         </DoneCard>
       )}
 
       <Drawer
         open={Boolean(detail)}
-        onOpenChange={(open) => {
-          if (!open) {
-            setOpenId(null);
-            setConfirmCancel(false);
-            cancelAction.clearError();
-          }
-        }}
+        onOpenChange={(open) => !open && setOpenId(null)}
         title="Account change request"
         description={detail ? `${detail.id} · Submitted ${fmtDate(detail.date)}` : undefined}
-        footer={
-          detail?.status === "Pending" && canManage ? (
-            confirmCancel ? (
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-gray-900">
-                  Cancel this request? Your payout account stays as it is.
-                </p>
-                {cancelAction.error && (
-                  <InlineAlert tone="error" title="The request wasn't cancelled">
-                    {cancelAction.error}
-                  </InlineAlert>
-                )}
-                <div className="flex flex-wrap gap-2">
-                  <Btn
-                    variant="danger"
-                    className="border border-[#b4232f]"
-                    loading={cancelAction.pending}
-                    onClick={() => cancelRequest(detail.id)}
-                  >
-                    Cancel request
-                  </Btn>
-                  <Btn
-                    variant="tertiary"
-                    disabled={cancelAction.pending}
-                    onClick={() => setConfirmCancel(false)}
-                  >
-                    Keep request
-                  </Btn>
-                </div>
-              </div>
-            ) : (
-              <Btn variant="danger" className="-ml-3" onClick={() => setConfirmCancel(true)}>
-                Cancel request
-              </Btn>
-            )
-          ) : undefined
-        }
       >
         {detail && (
           <RequestDetail
@@ -990,7 +931,7 @@ function RequestDetail({
   if (request.status === "Pending") {
     items.push({
       label: "Koko review",
-      note: `Expected by ${fmtDate(addBusinessDays(request.date, reviewDays))}`,
+      note: UNTIL_REVIEWED,
       state: "current",
     });
     items.push({
@@ -1055,6 +996,9 @@ function RequestDetail({
           ["To", `${accountLabel(request.account)} · ${request.account.branch}`],
           ["Account holder", request.account.holder],
           ["Bank statement", request.filename],
+          ...(request.changeReason
+            ? ([["Reason for change", request.changeReason]] as Array<[string, string]>)
+            : []),
           ...(request.requestedBy
             ? ([["Requested by", request.requestedBy]] as Array<[string, string]>)
             : []),

@@ -1,18 +1,12 @@
-import {
-  emptyLoan,
-  reference,
-  useFinanceData,
-  type LoanForm,
-  type LoanRequest,
-} from "../FinanceData";
-import { BUSINESS, CURRENT_USER } from "./placeholders";
+import { emptyLoan, reference, useFinanceData, type LoanRequest } from "../FinanceData";
+import { BUSINESS, CREDIT_DECLINE_REASONS, CURRENT_USER } from "./placeholders";
 import { useDemo } from "./demo";
 import { VIEW_KEYS, useSetSearch } from "./url";
 
 // Main UI demo scenarios, listed under Scenarios in the Version switcher.
 // Each one loads sample data and opens the view where it can be seen.
 export type Scenario = { id: string; label: string; description: string };
-// Merchant credit intro: shows on each page load; this event brings it back.
+// Merchant loans intro: shows on each page load; this event brings it back.
 // Shared so a scenario can reset it even when the page isn't open.
 export const introState = { dismissed: false };
 export const INTRO_RESET_EVENT = "koko-credit-intro-reset";
@@ -20,51 +14,44 @@ export const INTRO_RESET_EVENT = "koko-credit-intro-reset";
 export const SCENARIOS: Scenario[] = [
   {
     id: "credit-first-visit",
-    label: "Merchant credit: first visit",
+    label: "Merchant loans: first visit",
     description: "Shows the How it works introduction again",
   },
   {
-    id: "credit-changes-requested",
-    label: "Merchant credit: changes requested",
-    description: "Sampath Bank sent a request back with changes to make",
+    id: "credit-accepted",
+    label: "Merchant loans: request accepted",
+    description: "Sampath Bank accepted a request and made an offer",
+  },
+  {
+    id: "credit-rejected",
+    label: "Merchant loans: request rejected",
+    description: "Sampath Bank rejected a request",
   },
   {
     id: "credit-not-eligible",
-    label: "Merchant credit: not eligible yet",
+    label: "Merchant loans: not eligible yet",
     description: "Koko sales are below what the bank needs",
   },
 ];
 
 const daysAgo = (days: number) => new Date(Date.now() - days * 86400000).toISOString();
 
-function changesRequested(): LoanRequest {
+// Once sent, a request is only ever accepted or rejected by the bank.
+function decidedRequest(status: "Accepted" | "Rejected"): LoanRequest {
   return {
     id: reference("MC"),
     bankId: "sampath",
-    status: "Rejected",
+    status,
     date: daysAgo(6),
     decidedAt: daysAgo(1),
-    reason:
-      "Sampath Bank can't approve this request as it is, but will review it again with the changes below.",
-    changes: [
-      {
-        step: 0,
-        fields: ["mc-amount", "mc-security"],
-        title: "Lower the amount or offer security",
-        note: "Up to LKR 1,700,000 can be approved without security. For LKR 3,500,000, offer a fixed deposit or property.",
-      },
-      {
-        step: 2,
-        fields: ["mc-statements"],
-        title: "Add the missing bank statements",
-        note: "The statements cover April to July. Add August and September so all 6 months are included.",
-      },
-    ],
+    ...(status === "Accepted"
+      ? { offer: { amount: "1500000", term: "24", rate: "14.5% a year" } }
+      : { reason: CREDIT_DECLINE_REASONS[1] }),
     requestedBy: CURRENT_USER.username,
     consent: { crib: true, authorised: true, at: daysAgo(6), by: CURRENT_USER.username },
     form: {
       ...emptyLoan,
-      amount: "3500000",
+      amount: "1500000",
       purpose: "Business expansion",
       term: "24",
       security: "None",
@@ -80,21 +67,10 @@ function changesRequested(): LoanRequest {
       lender: "Hatton National Bank",
       repayments: "45000",
       outstanding: "600000",
-      statements: "Carnage-statements-Apr-Jul.pdf",
+      statements: "Carnage-statements-Apr-Sep.pdf",
     },
   };
 }
-
-// A new draft prefilled from a request the bank sent back. Statements must be
-// attached again; the first step with a requested change is where to start.
-export const resubmitDraft = (request: Pick<LoanRequest, "id" | "form">): LoanForm => ({
-  ...request.form,
-  statements: "",
-  accounts: "",
-  resubmitOf: request.id,
-});
-export const firstChangeStep = (request: Pick<LoanRequest, "changes">) =>
-  Math.min(...(request.changes ?? [{ step: 0 }]).map((change) => change.step));
 
 export function useRunScenario() {
   const { setData } = useFinanceData();
@@ -123,24 +99,21 @@ export function useRunScenario() {
       setSearch({ ...clear, page: "merchant-loans" });
       return;
     }
-    if (id !== "credit-changes-requested") return;
+    if (id !== "credit-accepted" && id !== "credit-rejected") return;
     update({ eligibility: "eligible", role: "Super Admin" });
-    const request = changesRequested();
+    const request = decidedRequest(id === "credit-accepted" ? "Accepted" : "Rejected");
     setData((previous) => {
+      const drafts = { ...previous.loanDrafts };
+      delete drafts[request.bankId];
       return {
         ...previous,
-        loanDrafts: { ...previous.loanDrafts, [request.bankId]: resubmitDraft(request) },
+        loanDrafts: drafts,
         loans: [request, ...previous.loans.filter((loan) => loan.bankId !== request.bankId)],
         cancelledLoans: (previous.cancelledLoans ?? []).filter(
           (loan) => loan.bankId !== request.bankId,
         ),
       };
     });
-    setSearch({
-      ...clear,
-      page: "merchant-loans",
-      apply: request.bankId,
-      step: String(firstChangeStep(request) + 1),
-    });
+    setSearch({ ...clear, page: "merchant-loans", tab: "requests", request: request.id });
   };
 }

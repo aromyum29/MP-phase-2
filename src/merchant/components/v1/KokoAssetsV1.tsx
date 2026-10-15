@@ -53,7 +53,7 @@ const validity = (asset: AssetV1) => {
     : `${fmtDate(asset.validFrom)} – ${fmtDate(asset.validUntil)}`;
 };
 const describe = (variant: Variant) =>
-  `${variant.format} · ${variant.width} × ${variant.height} px · ${fileSize(variant.bytes)}`;
+  `${variant.width} × ${variant.height} px · ${fileSize(variant.bytes)}`;
 
 function useDownload() {
   const { consumeFailure } = useDemo();
@@ -475,7 +475,7 @@ function DownloadMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align} className="koko-v1 w-72 p-1.5">
         <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
-          Choose a version
+          Choose a format
         </DropdownMenuLabel>
         {asset.variants.map((variant) => (
           <DropdownMenuItem
@@ -487,18 +487,16 @@ function DownloadMenu({
               href={variant.url}
               download={variant.filename}
               onClick={(event) =>
-                download(
-                  event,
-                  asset.title,
-                  `${variant.bestFor} · ${variant.format} · ${fileSize(variant.bytes)}`,
-                )
+                download(event, asset.title, `${variant.format} · ${fileSize(variant.bytes)}`)
               }
             >
-              <span className="flex flex-col">
-                <span className="text-sm font-medium">{variant.bestFor}</span>
-                <span className="text-xs text-muted-foreground">
-                  {describe(variant)}
-                  {variant.note ? ` · ${variant.note}` : ""}
+              <span className="flex w-full items-start gap-3">
+                <span className="mt-0.5 w-11 shrink-0 rounded-md bg-[#f3f3f5] py-0.5 text-center text-xs font-semibold text-gray-900">
+                  {variant.format}
+                </span>
+                <span className="flex min-w-0 flex-col">
+                  <span className="text-sm font-medium">{variant.bestFor}</span>
+                  <span className="text-xs text-muted-foreground">{describe(variant)}</span>
                 </span>
               </span>
             </a>
@@ -566,8 +564,7 @@ function AssetCard({
         </div>
         <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-1">
           <span className="text-xs text-muted-foreground">
-            {asset.variants.length} {asset.variants.length === 1 ? "version" : "versions"} · from{" "}
-            {fileSize(Math.min(...asset.variants.map((variant) => variant.bytes)))}
+            {asset.variants.map((variant) => variant.format).join(", ")}
           </span>
           {expired ? (
             <span className="text-sm text-muted-foreground">Downloads off</span>
@@ -655,30 +652,26 @@ function AssetPreview({
       )}
       {!expired && (
         <section aria-labelledby="versions-heading">
-          <h3 id="versions-heading" className="mb-2 text-base font-semibold">
-            Versions
+          <h3 id="versions-heading" className="mb-2 text-sm font-semibold text-gray-900">
+            Download as
           </h3>
           <ul className="divide-y divide-border rounded-xl border border-border">
             {asset.variants.map((variant) => (
               <li key={variant.url} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                <span className="min-w-0 flex-1 basis-48">
+                <span className="w-11 shrink-0 rounded-md bg-[#f3f3f5] py-0.5 text-center text-xs font-semibold text-gray-900">
+                  {variant.format}
+                </span>
+                <span className="min-w-0 flex-1 basis-40">
                   <span className="block text-sm font-medium">{variant.bestFor}</span>
-                  <span className="block text-xs text-muted-foreground">
-                    {describe(variant)}
-                    {variant.note ? ` · ${variant.note}` : ""}
-                  </span>
+                  <span className="block text-xs text-muted-foreground">{describe(variant)}</span>
                 </span>
                 <Btn asChild variant="secondary" size="sm">
                   <a
                     href={variant.url}
                     download={variant.filename}
-                    aria-label={`Download, ${variant.bestFor}`}
+                    aria-label={`Download ${variant.format}`}
                     onClick={(event) =>
-                      download(
-                        event,
-                        asset.title,
-                        `${variant.bestFor} · ${variant.format} · ${fileSize(variant.bytes)}`,
-                      )
+                      download(event, asset.title, `${variant.format} · ${fileSize(variant.bytes)}`)
                     }
                   >
                     <Download aria-hidden="true" />
